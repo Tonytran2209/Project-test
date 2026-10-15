@@ -9,7 +9,7 @@ from app.outreach_account_pool import (
     DEFAULT_OUTREACH_ACCOUNT_IDS,
     OUTREACH_ACCOUNT_DISPLAY_NAMES,
 )
-from app.outreach_campaign_identity import campaign_id_for_name
+from app.outreach_campaign_identity import campaign_id_for_name, connect_batch_label
 from app.outreach_dashboard_store import get_outreach_client
 from app.outreach_reply_direction import profile_slug_key
 
@@ -298,7 +298,7 @@ def _attach_batch_codes(replies: list[dict], active_client: Client) -> None:
     if connect_batch_ids:
         job_response = (
             active_client.table(CONNECT_JOB_TABLE)
-            .select("id,job_code,display_name")
+            .select("id,job_code,display_name,batch_name,created_at")
             .in_("id", connect_batch_ids)
             .execute()
         )
@@ -314,6 +314,9 @@ def _attach_batch_codes(replies: list[dict], active_client: Client) -> None:
         campaign_name = _safe_text(connect_job.get("display_name"))
         reply["connect_batch_id"] = connect_batch_id
         reply["connect_batch_code"] = _safe_text(connect_job.get("job_code"))
+        reply["connect_batch_label"] = connect_batch_label(
+            connect_job.get("batch_name"), campaign_name, connect_job.get("created_at")
+        ) if connect_job else ""
         reply["campaign_id"] = campaign_id_for_name(
             campaign_name, connect_batch_id=connect_batch_id
         )

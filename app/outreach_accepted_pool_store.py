@@ -4,7 +4,9 @@ from collections import OrderedDict
 
 from supabase import Client, create_client
 
-from app.outreach_campaign_identity import campaign_id_for_name
+from app.outreach_campaign_identity import (
+    campaign_id_for_name, connect_batch_label, connect_batch_name,
+)
 from app.settings import load_settings
 
 
@@ -297,6 +299,10 @@ def _load_job_metadata(
         result[job_id] = {
             "job_code": _safe_text(row.get("job_code")),
             "display_name": _safe_text(row.get("display_name")),
+            "batch_name": connect_batch_name(row.get("batch_name"), row.get("created_at")),
+            "batch_label": connect_batch_label(
+                row.get("batch_name"), row.get("display_name"), row.get("created_at")
+            ),
             "campaign_id": campaign_id_for_name(
                 row.get("display_name"), connect_batch_id=job_id
             ),
@@ -507,6 +513,8 @@ def get_accepted_pool(
             "", connect_batch_id=job_id
         )
         item["job_code"] = job_metadata.get("job_code", "")
+        item["batch_name"] = job_metadata.get("batch_name", "")
+        item["batch_label"] = job_metadata.get("batch_label", "")
         item["display_name"] = job_metadata.get("display_name", "")
         item["campaign_name"] = item["display_name"]
         item["job_created_at"] = job_metadata.get("created_at")

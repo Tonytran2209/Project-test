@@ -7,7 +7,10 @@ from zoneinfo import ZoneInfo
 
 from supabase import Client
 
-from app.outreach_campaign_identity import campaign_id_for_name, canonical_campaign_name
+from app.outreach_campaign_identity import (
+    campaign_id_for_name, canonical_campaign_name, connect_batch_label,
+    connect_batch_name,
+)
 from app.outreach_dashboard_store import get_outreach_client
 from app.outreach_reply_direction import profile_slug_key
 
@@ -101,6 +104,10 @@ def aggregate_campaign_performance(jobs: list[dict], connect_targets: list[dict]
         batch = {
             "batch_id": batch_id,
             "batch_code": _text(job.get("job_code")) or batch_id,
+            "batch_name": connect_batch_name(job.get("batch_name"), job.get("created_at")),
+            "batch_label": connect_batch_label(
+                job.get("batch_name"), job.get("display_name"), job.get("created_at")
+            ),
             "created_at": job.get("created_at"),
             "_added": set(), "_messaged": set(), "_replied": set(),
         }
@@ -208,7 +215,7 @@ def get_campaign_performance(window: str = "all", *, client: Client | None = Non
         raise ValueError("Unsupported campaign timeframe.")
     active_client = client or get_outreach_client()
     query = active_client.table("outreach_jobs").select(
-        "id,job_code,display_name,created_at"
+        "id,job_code,display_name,batch_name,created_at"
     ).eq("job_type", "connect").order("id")
     days = WINDOW_DAYS[window]
     if days is not None:

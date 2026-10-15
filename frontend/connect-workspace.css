@@ -69,6 +69,7 @@
 .connect-name-field small { color: #999891; font-size: 11px; font-weight: 400; }
 .connect-name-field > span small { margin-left: 5px; }
 #tab-outreach #outreachNewCampaign,
+#tab-outreach #outreachBatchName,
 #tab-outreach #outreachUrlInput {
   width: 100%;
   border: 1px solid #deded9 !important;
@@ -78,11 +79,14 @@
   color: #37352f !important;
   font: inherit;
 }
-#tab-outreach #outreachNewCampaign { height: 42px; padding: 0 12px; }
+#tab-outreach #outreachNewCampaign,
+#tab-outreach #outreachBatchName { height: 42px; padding: 0 12px; }
 #tab-outreach #outreachUrlInput { min-height: 160px !important; padding: 12px !important; resize: vertical; }
 #tab-outreach #outreachNewCampaign::placeholder,
+#tab-outreach #outreachBatchName::placeholder,
 #tab-outreach #outreachUrlInput::placeholder { color: #aaa9a3 !important; }
 #tab-outreach #outreachNewCampaign:focus,
+#tab-outreach #outreachBatchName:focus,
 #tab-outreach #outreachUrlInput:focus { outline: 2px solid #c9e0fa; border-color: #8fbbe9 !important; }
 .connect-custom-select { position: relative; min-width: 0; }
 #tab-outreach .connect-custom-select select[hidden] { display: none !important; }

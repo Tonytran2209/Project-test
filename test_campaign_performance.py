@@ -3,7 +3,10 @@ import unittest
 from types import ModuleType
 from unittest.mock import patch
 
-from app.outreach_campaign_identity import canonical_campaign_name, campaign_id_for_name
+from app.outreach_campaign_identity import (
+    canonical_campaign_name, campaign_id_for_name, connect_batch_label,
+    connect_batch_name,
+)
 
 VERIFIED_CONVERSATION = [
     {"sender_type": "own", "text": "Hello, reaching out about your creative work."},
@@ -31,6 +34,18 @@ class CampaignPerformanceTest(unittest.TestCase):
         self.assertEqual(canonical_campaign_name(later), "Video Production Agency")
         self.assertEqual(campaign_id_for_name(first), campaign_id_for_name(later))
         self.assertEqual(canonical_campaign_name("MKT mana"), "MKT mana")
+
+    def test_legacy_batches_use_local_run_date_without_changing_campaign(self):
+        created_at = "2026-10-14T18:30:00Z"
+        self.assertEqual(connect_batch_name(None, created_at), "15/10/2026")
+        self.assertEqual(
+            connect_batch_label(None, "14/10/2026 - Video Production Agency", created_at),
+            "15/10/2026 - Video Production Agency",
+        )
+        self.assertEqual(
+            connect_batch_label("Agency outreach", "Video Production Agency", created_at),
+            "Agency outreach - Video Production Agency",
+        )
 
     def test_same_campaign_aggregates_batches_without_duplicate_replies(self):
         jobs = [

@@ -2,6 +2,7 @@ import unittest
 import sys
 from types import ModuleType
 from unittest.mock import patch
+from app import outreach_campaign_identity as campaign
 
 
 try:
@@ -15,8 +16,6 @@ except ModuleNotFoundError as exc:
     supabase.create_client = lambda *args, **kwargs: None
     accepted_pool = ModuleType("app.outreach_accepted_pool_store")
     accepted_pool.get_accepted_pool = lambda **kwargs: None
-    campaign = ModuleType("app.outreach_campaign_identity")
-    campaign.campaign_id_for_name = lambda *args, **kwargs: ""
     settings = ModuleType("app.settings")
     settings.load_settings = lambda: None
     with patch.dict(sys.modules, {

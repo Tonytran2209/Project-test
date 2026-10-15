@@ -10,7 +10,7 @@ from supabase import create_client
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.outreach_campaign_identity import campaign_id_for_name
+from app.outreach_campaign_identity import campaign_id_for_name, connect_batch_label
 from app.outreach_job_store import (
     MAX_CONNECT_URLS,
     OutreachJobStoreError,
@@ -671,10 +671,19 @@ async def create_outreach_connect_job(
             "error": "Choose or create a Campaign before starting Connect",
         })
 
+    batch_name = body.get("batch_name", "")
+    if not isinstance(batch_name, str) or len(batch_name.strip()) > 80:
+        return JSONResponse(status_code=400, content={
+            "ok": False,
+            "error": "Batch name must be text of at most 80 characters",
+        })
+    batch_name = batch_name.strip()
+
     try:
         result = create_connect_job(
             cleaned_urls,
             display_name=display_name,
+            batch_name=batch_name,
         )
 
     except OutreachJobStoreError as exc:
@@ -745,6 +754,8 @@ async def create_outreach_connect_job(
             "job": {
                 "job_id": result.job_id,
                 "job_code": result.job_code,
+                "batch_name": result.batch_name,
+                "batch_label": connect_batch_label(result.batch_name, display_name, None),
                 "display_name": display_name,
                 "campaign_id": campaign_id_for_name(display_name),
                 "connect_batch_id": result.job_id,

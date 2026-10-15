@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 from supabase import Client, create_client
 
+from app.outreach_campaign_identity import canonical_campaign_name
 from app.settings import load_settings
 
 
@@ -31,6 +32,7 @@ class OutreachJobStoreError(
 class OutreachJobCreateResult:
     job_id: str
     job_code: str
+    batch_name: str
 
     input_count: int
     target_count: int
@@ -79,7 +81,7 @@ def list_connect_campaigns(*, client: Client | None = None) -> list[str]:
         )
         rows = response.data if isinstance(response.data, list) else []
         for row in rows:
-            name = str(row.get("display_name") or "").strip()
+            name = canonical_campaign_name(row.get("display_name"))
             if name:
                 names.setdefault(name.casefold(), name)
         if len(rows) < page_size:
@@ -347,6 +349,7 @@ def create_connect_job(
     urls: Iterable[str],
     *,
     display_name: str = "",
+    batch_name: str = "",
     client: Client | None = None,
 ) -> OutreachJobCreateResult:
     """
@@ -393,6 +396,9 @@ def create_connect_job(
         client=active_client,
         input_count=input_count,
     )
+    effective_batch_name = " ".join(str(batch_name or "").split()) or datetime.now(
+        LOCAL_TIMEZONE
+    ).strftime("%d/%m/%Y")
 
     # -----------------------------------------------------
     # CREATE JOB
@@ -401,6 +407,7 @@ def create_connect_job(
     job_data = {
         "job_type": "connect",
         "job_code": job_code,
+        "batch_name": effective_batch_name,
         "status": "creating",
         "input_count": input_count,
         "target_count": 0,
@@ -603,6 +610,7 @@ def create_connect_job(
     return OutreachJobCreateResult(
         job_id=job_id,
         job_code=job_code,
+        batch_name=effective_batch_name,
 
         input_count=input_count,
         target_count=target_count,

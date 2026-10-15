@@ -8,7 +8,9 @@ from supabase import Client, create_client
 from app.outreach_accepted_pool_store import (
     get_accepted_pool,
 )
-from app.outreach_campaign_identity import campaign_id_for_name
+from app.outreach_campaign_identity import (
+    campaign_id_for_name, connect_batch_label, connect_batch_name,
+)
 from app.settings import load_settings
 
 
@@ -809,6 +811,10 @@ def _attach_source_connect_ids_to_batches(
                 job_code_by_id[job_id] = {
                     "code": _safe_text(row.get("job_code")),
                     "display_name": _safe_text(row.get("display_name")),
+                    "batch_name": connect_batch_name(row.get("batch_name"), row.get("created_at")),
+                    "batch_label": connect_batch_label(
+                        row.get("batch_name"), row.get("display_name"), row.get("created_at")
+                    ),
                     "campaign_id": campaign_id_for_name(
                         row.get("display_name"), connect_batch_id=job_id
                     ),
@@ -901,6 +907,8 @@ def _attach_source_connect_ids_to_batches(
                     "display_name": job_code_by_id.get(job_id, {}).get(
                         "display_name", ""
                     ),
+                    "batch_name": job_code_by_id.get(job_id, {}).get("batch_name", ""),
+                    "batch_label": job_code_by_id.get(job_id, {}).get("batch_label", ""),
                     "campaign_id": job_code_by_id.get(job_id, {}).get(
                         "campaign_id", ""
                     ),

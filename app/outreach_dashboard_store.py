@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from supabase import Client, create_client
 
-from app.outreach_campaign_identity import campaign_id_for_name
+from app.outreach_campaign_identity import campaign_id_for_name, connect_batch_label, connect_batch_name
 from app.settings import (
     Settings,
     load_settings,
@@ -202,6 +202,10 @@ def _normalize_job(
         ),
 
         "display_name": _safe_text(row.get("display_name")),
+        "batch_name": connect_batch_name(row.get("batch_name"), row.get("created_at")),
+        "batch_label": connect_batch_label(
+            row.get("batch_name"), row.get("display_name"), row.get("created_at")
+        ),
         "campaign_id": campaign_id_for_name(
             row.get("display_name"), connect_batch_id=_safe_text(row.get("id"))
         ),

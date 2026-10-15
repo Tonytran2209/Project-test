@@ -115,6 +115,8 @@ const els = {
     document.querySelector("#outreachNewCampaignField"),
   outreachNewCampaign:
     document.querySelector("#outreachNewCampaign"),
+  outreachBatchName:
+    document.querySelector("#outreachBatchName"),
   connectHistoryCampaignFilter:
     document.querySelector("#connectHistoryCampaignFilter"),
   connectHistoryCampaignTrigger:
@@ -3212,7 +3214,7 @@ async function queueOutreachAcceptanceCheck(
 
 
 function getConnectCampaignLabel(job) {
-  return String(job?.display_name || job?.job_code || job?.id || "").trim();
+  return String(job?.batch_label || job?.display_name || job?.job_code || job?.id || "").trim();
 }
 
 function getLatestAcceptanceCheckedAt(acceptance){if(!acceptance)return null;return acceptance.completed_at||acceptance.updated_at||acceptance.started_at||null}
@@ -4616,6 +4618,7 @@ function getAcceptedPoolBatchCode(
 function getAcceptedPoolConnectIdLabel(
   item
 ) {
+  if (item?.batch_label) return String(item.batch_label);
   const jobCode =
     String(
       item?.job_code ||
@@ -5662,6 +5665,7 @@ function getMessageBatchSourceLabel(
 ) {
   const code =
     String(
+      source?.batch_label ||
       source?.display_name ||
       source?.code ||
       ""
@@ -5688,7 +5692,7 @@ function getMessageBatchSourceLabel(
 
 function getMessageBatchSourceTooltipLine(source) {
   const code = String(source?.code || source?.id || "").trim();
-  const name = String(source?.display_name || "").trim();
+  const name = String(source?.batch_label || source?.display_name || "").trim();
 
   return code && name
     ? `${code} - ${name}`
@@ -6190,7 +6194,7 @@ function renderMessagePreparation() {
       if (sourceIds.length === 1) {
         const sourceItem = sourceIds[0];
         source.textContent =
-          `${sourceItem.display_name || "Unnamed campaign"} · ${sourceItem.code || sourceItem.id}`;
+          sourceItem.batch_label || `${sourceItem.display_name || "Unnamed campaign"} · ${sourceItem.code || sourceItem.id}`;
 
         source.title =
           `Campaign: ${sourceItem.display_name || "Unnamed campaign"}\nSource Batch ID: ${sourceItem.id}\n${getMessageBatchSourceTooltipLine(sourceItem)}`;
@@ -7065,18 +7069,23 @@ function renderConnectHistory(jobs) {
   const allRows = Array.isArray(jobs) ? jobs : [];
   const filter = els.connectHistoryCampaignFilter;
   if (filter) {
-    const names = [...new Set(allRows.map((job) => String(job.display_name || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-    const currentNames = [...filter.options].slice(1).map((option) => option.value);
-    if (names.join("\u0000") !== currentNames.join("\u0000")) {
+    const campaigns = new Map();
+    for (const job of allRows) {
+      const id = String(job.campaign_id || "").trim();
+      if (id && !campaigns.has(id)) campaigns.set(id, acceptedPoolCampaignName({campaign_name: job.display_name}));
+    }
+    const options = [...campaigns.entries()].sort((left, right) => left[1].localeCompare(right[1]));
+    const currentIds = [...filter.options].slice(1).map((option) => option.value);
+    if (options.map(([id]) => id).join("\u0000") !== currentIds.join("\u0000")) {
       const selected = filter.value;
       filter.replaceChildren(new Option("All campaigns", ""));
-      for (const name of names) filter.add(new Option(name, name));
-      filter.value = names.includes(selected) ? selected : "";
+      for (const [id, name] of options) filter.add(new Option(name, id));
+      filter.value = campaigns.has(selected) ? selected : "";
     }
   }
   renderConnectDropdown(connectDropdowns[1]);
   const campaignRows = filter?.value
-    ? allRows.filter((job) => String(job.display_name || "").trim() === filter.value)
+    ? allRows.filter((job) => String(job.campaign_id || "").trim() === filter.value)
     : allRows;
   const dateFilter = els.connectHistoryDateFilter;
   if (dateFilter) {
@@ -7189,7 +7198,7 @@ function renderConnectHistory(jobs) {
       button.setAttribute("aria-pressed", String(state.selectedConnectHistoryJobId === job.id));
       const name = document.createElement("span");
       name.className = "connect-history-run-name";
-      name.textContent = job.display_name || job.job_code || "Unnamed run";
+      name.textContent = getConnectCampaignLabel(job) || "Unnamed run";
       const status = document.createElement("span");
       status.className = "connect-history-run-status";
       status.textContent = statusLabel(job.status || "pending");
@@ -7664,6 +7673,7 @@ async function createOutreachConnectJob(
   const campaignName = state.connectCampaigns.find(
     (name) => name.toLocaleLowerCase() === enteredCampaign.toLocaleLowerCase()
   ) || enteredCampaign;
+  const batchName = String(els.outreachBatchName?.value || "").trim();
   if (!campaignName) {
     els.outreachCampaignTrigger?.focus();
     return;
@@ -7715,7 +7725,8 @@ async function createOutreachConnectJob(
 
         body: JSON.stringify({
           urls,
-          campaign_name: campaignName
+          campaign_name: campaignName,
+          batch_name: batchName
         })
       }
     );
@@ -7752,6 +7763,7 @@ async function createOutreachConnectJob(
       els.outreachUrlInput.value =
         "";
     }
+    if (els.outreachBatchName) els.outreachBatchName.value = "";
 
     if (!state.connectCampaigns.some((name) => name.toLowerCase() === campaignName.toLowerCase())) {
       state.connectCampaigns.push(campaignName);
@@ -8869,7 +8881,7 @@ function renderOutreachReplyInbox() {
     const text = String(reply.message_text || "No message content captured.").trim();
     const campaignName = String(reply.campaign_name || "").trim();
     const sourceBatch = String(reply.connect_batch_code || reply.connect_batch_id || "").trim();
-    const sourceLabel =
+    const sourceLabel = String(reply.connect_batch_label || "").trim() ||
       `Campaign: ${campaignName || "Unavailable"} · Batch ID: ${sourceBatch || "Unavailable"}`;
     const row = document.createElement("button");
     row.type = "button";
@@ -8913,7 +8925,7 @@ function renderOutreachReplyInbox() {
   const campaignName = String(reply.campaign_name || "").trim();
   const sourceBatchCode = String(reply.connect_batch_code || "").trim();
   const sourceBatchId = String(reply.connect_batch_id || "").trim();
-  const sourceBatchLabel = sourceBatchCode || sourceBatchId;
+  const sourceBatchLabel = String(reply.connect_batch_label || "").trim() || sourceBatchCode || sourceBatchId;
   const rawUrl = String(reply.linkedin_url || "").trim();
   let safeUrl = "";
   try {
@@ -8940,7 +8952,7 @@ function renderOutreachReplyInbox() {
   const header = `<header class="reply-inbox-chat-header">
     <span class="reply-inbox-avatar is-large" aria-hidden="true">${escapeHtml(name.charAt(0).toUpperCase())}</span>
     <div class="reply-inbox-chat-identity"><h3>${escapeHtml(name)}</h3><p>${escapeHtml(accountName)}${batch ? ` · Message batch ${escapeHtml(batch)}` : ""}</p>
-      <p class="reply-inbox-chat-source" title="${sourceBatchId ? `Source Connect batch ID: ${escapeHtml(sourceBatchId)}` : "Source Connect batch unavailable"}">Campaign: ${escapeHtml(campaignName || "Unavailable")} · Source Batch ID: ${escapeHtml(sourceBatchLabel || "Unavailable")}</p></div>
+      <p class="reply-inbox-chat-source" title="${sourceBatchId ? `Source Connect batch ID: ${escapeHtml(sourceBatchId)}` : "Source Connect batch unavailable"}">${escapeHtml(sourceBatchLabel || `Campaign: ${campaignName || "Unavailable"}`)}</p></div>
     ${safeUrl ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="reply-inbox-link">LinkedIn ↗</a>` : ""}
   </header>`;
   const conversation = messages.length ? messages.map((message) => {
@@ -9381,11 +9393,11 @@ function renderCampaignPerformance() {
     const expanded = id === state.expandedCampaignId;
     const batches = Array.isArray(campaign.batches) ? campaign.batches : [];
     const accounts = Array.isArray(campaign.accounts) ? campaign.accounts : [];
-    const codes = batches.map((batch) => String(batch.batch_code || batch.batch_id || ""));
+    const codes = batches.map((batch) => String(batch.batch_label || batch.batch_code || batch.batch_id || ""));
     const summary = codes.length <= 2 ? codes.join(", ") : `${codes[0]} + ${codes.length - 1} more`;
     const detail = expanded ? `<div class="campaigns-detail">
       <section class="campaigns-detail-section"><h3>By Connect batch</h3><div class="campaigns-detail-head"><span>Batch</span><span>Created</span><span>Added</span><span>Messaged</span><span>Replies</span><span>Reply rate</span></div>${batches.map((batch) => `
-        <div class="campaigns-batch-row"><strong>${escapeHtml(batch.batch_code || batch.batch_id)}</strong><span>${escapeHtml(formatDate(batch.created_at))}</span><span>${Number(batch.added || 0)}</span><span>${Number(batch.messaged || 0)}</span><span>${Number(batch.replies || 0)}</span><span>${Number(batch.reply_rate || 0).toFixed(1)}%</span></div>`).join("")}</section>
+        <div class="campaigns-batch-row"><strong title="Batch ID: ${escapeHtml(batch.batch_code || batch.batch_id || "")}">${escapeHtml(batch.batch_label || batch.batch_code || batch.batch_id)}</strong><span>${escapeHtml(formatDate(batch.created_at))}</span><span>${Number(batch.added || 0)}</span><span>${Number(batch.messaged || 0)}</span><span>${Number(batch.replies || 0)}</span><span>${Number(batch.reply_rate || 0).toFixed(1)}%</span></div>`).join("")}</section>
       <section class="campaigns-detail-section"><div class="campaigns-detail-head"><span>Account</span><span>Account ID</span><span>Added</span><span>Messaged</span><span>Replies</span><span>Reply rate</span></div>${accounts.length ? accounts.map((account) => `
         <div class="campaigns-batch-row"><strong>${escapeHtml(account.account_id === "unassigned" ? "Unassigned" : getOutreachAccountDisplayName(account.account_id))}</strong><span>${escapeHtml(account.account_id === "unassigned" ? "—" : account.account_id)}</span><span>${Number(account.added || 0)}</span><span>${Number(account.messaged || 0)}</span><span>${Number(account.replies || 0)}</span><span>${Number(account.reply_rate || 0).toFixed(1)}%</span></div>`).join("") : '<p class="campaigns-detail-empty">No account data for these batches.</p>'}</section>
     </div>` : "";
@@ -10560,7 +10572,7 @@ document.addEventListener("keydown", (event) => {
 });
 els.connectHistoryCampaignFilter?.addEventListener("change", () => {
   if (els.connectHistoryDateFilter) els.connectHistoryDateFilter.value = "";
-  const jobs = state.outreachRecentJobs.filter((job) => !els.connectHistoryCampaignFilter.value || job.display_name === els.connectHistoryCampaignFilter.value);
+  const jobs = state.outreachRecentJobs.filter((job) => !els.connectHistoryCampaignFilter.value || job.campaign_id === els.connectHistoryCampaignFilter.value);
   state.expandedConnectWeekKey = jobs.length
     ? connectWeekStart(jobs[0].created_at)?.toISOString().slice(0, 10) || "unknown"
     : null;
@@ -10569,7 +10581,7 @@ els.connectHistoryCampaignFilter?.addEventListener("change", () => {
 els.connectHistoryDateFilter?.addEventListener("change", () => {
   const date = els.connectHistoryDateFilter.value;
   const job = state.outreachRecentJobs.find((item) =>
-    (!els.connectHistoryCampaignFilter?.value || item.display_name === els.connectHistoryCampaignFilter.value)
+    (!els.connectHistoryCampaignFilter?.value || item.campaign_id === els.connectHistoryCampaignFilter.value)
     && (!date || connectDayKey(item.created_at) === date));
   state.expandedConnectWeekKey = job
     ? connectWeekStart(job.created_at)?.toISOString().slice(0, 10) || "unknown"
