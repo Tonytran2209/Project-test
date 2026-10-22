@@ -55,6 +55,12 @@
 }
 
 #tab-outreach .outreach-connect-form { gap: 20px; }
+.connect-paste-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; }
+#tab-outreach .connect-paste-columns .outreach-url-field { min-width: 0; align-content: start; }
+#tab-outreach .connect-paste-columns .outreach-url-field > span { min-height: 36px; }
+.outreach-company-field small { color: #999891; font-size: 11px; font-weight: 400; }
+.connect-company-match { margin: -8px 0 0; color: #858580; font-size: 12px; }
+.connect-company-match.is-error { color: #b54444; }
 .connect-name-field,
 #tab-outreach .outreach-url-field { display: grid; gap: 7px; }
 .connect-name-field[hidden] { display: none !important; }
@@ -70,6 +76,7 @@
 .connect-name-field > span small { margin-left: 5px; }
 #tab-outreach #outreachNewCampaign,
 #tab-outreach #outreachBatchName,
+#tab-outreach #outreachCompanyInput,
 #tab-outreach #outreachUrlInput {
   width: 100%;
   border: 1px solid #deded9 !important;
@@ -81,12 +88,15 @@
 }
 #tab-outreach #outreachNewCampaign,
 #tab-outreach #outreachBatchName { height: 42px; padding: 0 12px; }
-#tab-outreach #outreachUrlInput { min-height: 160px !important; padding: 12px !important; resize: vertical; }
+#tab-outreach #outreachCompanyInput,
+#tab-outreach #outreachUrlInput { height: 200px !important; min-height: 200px !important; padding: 12px !important; resize: none; line-height: 24px !important; white-space: pre; overflow: auto; }
 #tab-outreach #outreachNewCampaign::placeholder,
 #tab-outreach #outreachBatchName::placeholder,
+#tab-outreach #outreachCompanyInput::placeholder,
 #tab-outreach #outreachUrlInput::placeholder { color: #aaa9a3 !important; }
 #tab-outreach #outreachNewCampaign:focus,
 #tab-outreach #outreachBatchName:focus,
+#tab-outreach #outreachCompanyInput:focus,
 #tab-outreach #outreachUrlInput:focus { outline: 2px solid #c9e0fa; border-color: #8fbbe9 !important; }
 .connect-custom-select { position: relative; min-width: 0; }
 #tab-outreach .connect-custom-select select[hidden] { display: none !important; }
@@ -158,11 +168,13 @@
 .connect-custom-select-copy { display: grid; min-width: 0; gap: 2px; }
 .connect-custom-select-copy strong { overflow: hidden; color: #37352f; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .connect-custom-select-copy small { color: #858580; font-size: 11px; font-weight: 400; line-height: 1.35; }
+#tab-outreach #outreachCompanyInput:disabled,
 #tab-outreach #outreachUrlInput:disabled { background: #f7f7f5 !important; cursor: not-allowed; }
 .connect-campaign-help { margin: -10px 0 0; color: #858580; font-size: 12px; line-height: 1.45; }
 #tab-outreach .outreach-input-footer { align-items: center !important; }
 #tab-outreach .outreach-input-summary strong { color: #37352f; }
 #tab-outreach .outreach-input-summary strong.is-over-limit { color: #b54444 !important; }
+#tab-outreach #outreachCompanyInput[aria-invalid="true"],
 #tab-outreach #outreachUrlInput[aria-invalid="true"] { border-color: #d88585 !important; outline-color: #f4d3d3; }
 #tab-outreach .outreach-input-summary .panel-meta { color: #858580 !important; }
 #tab-outreach #outreachStartButton { min-width: 140px; border-radius: 7px !important; background: #0a66c2 !important; color: #fff !important; }
@@ -274,7 +286,8 @@
 
 #appMainScroll.is-connect-workspace #tab-outreach .outreach-connect-workspace-body {
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 @media (max-width: 620px) {

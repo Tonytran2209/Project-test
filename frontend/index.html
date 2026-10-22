@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="./outreach-stripe.css?v=20260924-notion-empty-1" />
   <link rel="stylesheet" href="./sidebar.css?v=20260926-usage-guide-demo-1" />
   <link rel="stylesheet" href="./workflow-nav.css?v=20260924-draggable-nav-1" />
-  <link rel="stylesheet" href="./connect-workspace.css?v=20261015-batch-name-1" />
+  <link rel="stylesheet" href="./connect-workspace.css?v=20261022-company-columns-1" />
   <link rel="stylesheet" href="./acceptance-workspace.css?v=20261006-acceptance-campaign-summary-1" />
   <link rel="stylesheet" href="./recipients-workspace.css?v=20261007-recipient-campaign-3" />
   <link rel="stylesheet" href="./messages-workspace.css?v=20260924-messages-grid-2" />
@@ -856,18 +856,33 @@
         <div class="connect-name-field"><span id="outreachCampaignLabel">Campaign</span><div class="connect-custom-select"><select id="outreachCampaignSelect" hidden><option value="">Select a campaign</option><option value="__new__">+ Create new campaign…</option></select><button id="outreachCampaignTrigger" class="connect-custom-select-trigger" type="button" aria-labelledby="outreachCampaignLabel outreachCampaignValue" aria-haspopup="menu" aria-expanded="false" aria-controls="outreachCampaignMenu"><span id="outreachCampaignValue">Select a campaign</span><span class="connect-custom-select-chevron" aria-hidden="true"></span></button><div id="outreachCampaignMenu" class="connect-custom-select-menu" role="menu" hidden></div></div></div>
         <label class="connect-name-field" id="outreachNewCampaignField" for="outreachNewCampaign" hidden><span>New campaign name</span><input id="outreachNewCampaign" type="text" maxlength="80" placeholder="e.g. Video Production Agency" autocomplete="off" /></label>
         <label class="connect-name-field" for="outreachBatchName"><span>Batch name <small>Optional</small></span><input id="outreachBatchName" type="text" maxlength="80" placeholder="Leave blank to use today's date" autocomplete="off" /></label>
+        <div class="connect-paste-columns">
         <label class="outreach-url-field outreach-url-field-smart">
           <span>LinkedIn Profile URLs</span>
 
           <textarea
             id="outreachUrlInput"
             rows="3"
+            wrap="off"
             aria-describedby="outreachDetectedCount"
-            placeholder="Paste LinkedIn profile URLs here…"
+            placeholder="One LinkedIn profile URL per line"
             spellcheck="false"
             required
           ></textarea>
         </label>
+        <label class="outreach-url-field outreach-company-field" for="outreachCompanyInput">
+          <span>Company names <small>Optional</small></span>
+          <textarea
+            id="outreachCompanyInput"
+            rows="3"
+            wrap="off"
+            aria-describedby="outreachCompanyMatch"
+            placeholder="One company per line, in the same order"
+            spellcheck="false"
+          ></textarea>
+        </label>
+        </div>
+        <p id="outreachCompanyMatch" class="connect-company-match" role="status" hidden></p>
 
         <div class="outreach-input-footer outreach-input-footer-smart">
           <div class="outreach-input-summary">
@@ -1903,7 +1918,8 @@
   </dialog>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
-  <script src="./app.js?v=20261015-batch-name-1"></script>
+  <script src="./connect-input.js?v=20261022-company-columns-1"></script>
+  <script src="./app.js?v=20261022-company-columns-1"></script>
   <script src="./login.js?v=20260923-entry-3"></script>
   <script src="./usage-guide.js?v=20260926-replies-schedule-1"></script>
 </body>

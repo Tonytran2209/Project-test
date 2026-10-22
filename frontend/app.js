@@ -102,6 +102,10 @@ const els = {
 
   outreachUrlInput:
     document.querySelector("#outreachUrlInput"),
+  outreachCompanyInput:
+    document.querySelector("#outreachCompanyInput"),
+  outreachCompanyMatch:
+    document.querySelector("#outreachCompanyMatch"),
 
   outreachCampaignSelect:
     document.querySelector("#outreachCampaignSelect"),
@@ -1769,25 +1773,11 @@ function getOutreachAccountDisplayName(accountId) {
 
 
 function parseOutreachUrls() {
-  const rawText = String(
-    els.outreachUrlInput?.value || ""
-  );
+  return parseOutreachInput().urls;
+}
 
-  const matches = rawText.match(
-    /https?:\/\/(?:[a-z0-9-]+\.)?linkedin\.com\/in\/[^\s,;]+/gi
-  );
-
-  if (!matches) {
-    return [];
-  }
-
-  return matches
-    .map((url) =>
-      url
-        .trim()
-        .replace(/[),.;]+$/g, "")
-    )
-    .filter(Boolean);
+function parseOutreachInput() {
+  return ConnectInput.parse(els.outreachUrlInput?.value, els.outreachCompanyInput?.value);
 }
 
 function selectedConnectCampaign() {
@@ -1802,6 +1792,7 @@ function renderConnectCampaignSelection() {
   if (els.outreachNewCampaignField) els.outreachNewCampaignField.hidden = !isNew;
   if (els.outreachNewCampaign) els.outreachNewCampaign.required = isNew;
   if (els.outreachUrlInput) els.outreachUrlInput.disabled = !selectedConnectCampaign();
+  if (els.outreachCompanyInput) els.outreachCompanyInput.disabled = !selectedConnectCampaign();
   renderConnectDropdown(connectDropdowns[0]);
   renderOutreachSubmittingState();
 }
@@ -1831,7 +1822,7 @@ async function loadConnectCampaigns(preferredName = "") {
 }
 
 function updateOutreachDetectedCount() {
-  const urls = parseOutreachUrls();
+  const {urls, companyNames, error} = parseOutreachInput();
   const overLimit = urls.length > OUTREACH_MAX_CONNECT_URLS;
 
   if (els.outreachDetectedCount) {
@@ -1842,6 +1833,12 @@ function updateOutreachDetectedCount() {
   }
 
   els.outreachUrlInput?.setAttribute("aria-invalid", String(overLimit));
+  els.outreachCompanyInput?.setAttribute("aria-invalid", String(Boolean(error)));
+  if (els.outreachCompanyMatch) {
+    els.outreachCompanyMatch.hidden = !companyNames;
+    els.outreachCompanyMatch.textContent = error || (companyNames ? `${companyNames.length} companies matched by row` : "");
+    els.outreachCompanyMatch.classList.toggle("is-error", Boolean(error));
+  }
   renderOutreachSubmittingState();
 }
 
@@ -1859,6 +1856,7 @@ function renderOutreachSubmittingState() {
   els.outreachStartButton.disabled =
     state.outreachSubmitting ||
     !selectedConnectCampaign() ||
+    Boolean(parseOutreachInput().error) ||
     parseOutreachUrls().length > OUTREACH_MAX_CONNECT_URLS;
 
   if (els.outreachStartButtonText) {
@@ -7679,8 +7677,12 @@ async function createOutreachConnectJob(
     return;
   }
 
-  const urls =
-    parseOutreachUrls();
+  const {urls, companyNames, error: inputError} = parseOutreachInput();
+  if (inputError) {
+    updateOutreachDetectedCount();
+    els.outreachCompanyInput?.focus();
+    return;
+  }
 
   if (!urls.length) {
     window.alert(
@@ -7725,6 +7727,7 @@ async function createOutreachConnectJob(
 
         body: JSON.stringify({
           urls,
+          company_names: companyNames,
           campaign_name: campaignName,
           batch_name: batchName
         })
@@ -7764,6 +7767,7 @@ async function createOutreachConnectJob(
         "";
     }
     if (els.outreachBatchName) els.outreachBatchName.value = "";
+    if (els.outreachCompanyInput) els.outreachCompanyInput.value = "";
 
     if (!state.connectCampaigns.some((name) => name.toLowerCase() === campaignName.toLowerCase())) {
       state.connectCampaigns.push(campaignName);
@@ -10549,6 +10553,12 @@ els.outreachUrlInput?.addEventListener(
   "input",
   updateOutreachDetectedCount
 );
+els.outreachCompanyInput?.addEventListener("input", updateOutreachDetectedCount);
+for (const [source, target] of [[els.outreachUrlInput, els.outreachCompanyInput], [els.outreachCompanyInput, els.outreachUrlInput]]) {
+  source?.addEventListener("scroll", () => {
+    if (target && target.scrollTop !== source.scrollTop) target.scrollTop = source.scrollTop;
+  });
+}
 els.outreachCampaignSelect?.addEventListener("change", () => {
   renderConnectCampaignSelection();
   if (els.outreachCampaignSelect.value === NEW_CONNECT_CAMPAIGN) els.outreachNewCampaign?.focus();

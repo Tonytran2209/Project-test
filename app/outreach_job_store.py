@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 from supabase import Client, create_client
 
 from app.outreach_campaign_identity import canonical_campaign_name
+from app.outreach_connect_input import prepare_connect_entries
 from app.settings import load_settings
 
 
@@ -350,6 +351,7 @@ def create_connect_job(
     *,
     display_name: str = "",
     batch_name: str = "",
+    company_names: list[str] | None = None,
     client: Client | None = None,
 ) -> OutreachJobCreateResult:
     """
@@ -372,14 +374,13 @@ def create_connect_job(
         else get_outreach_supabase_client()
     )
 
-    raw_urls = [
-        str(url or "").strip()
-        for url in urls
-        if str(url or "").strip()
-    ]
+    try:
+        entries = prepare_connect_entries(urls, company_names)
+    except ValueError as exc:
+        raise OutreachJobStoreError(str(exc)) from exc
 
     input_count = len(
-        raw_urls
+        entries
     )
 
     if input_count == 0:
@@ -391,6 +392,16 @@ def create_connect_job(
         raise OutreachJobStoreError(
             f"Maximum {MAX_CONNECT_URLS} LinkedIn profile URLs per Connect job."
         )
+
+    if company_names is not None:
+        # Fail before creating a job if the company column is not deployed yet.
+        try:
+            active_client.table(PROSPECT_TABLE).select("company_name").limit(1).execute()
+        except Exception as exc:
+            raise OutreachJobStoreError(
+                "Could not access company-name storage. Apply "
+                "outreach_connect_company_names.sql and try again."
+            ) from exc
 
     job_code = _build_job_code(
         client=active_client,
@@ -460,7 +471,7 @@ def create_connect_job(
     # PROCESS INPUT
     # -----------------------------------------------------
 
-    for raw_url in raw_urls:
+    for raw_url, company_name in entries:
         normalized_url = (
             normalize_linkedin_url(
                 raw_url
@@ -506,18 +517,20 @@ def create_connect_job(
         # CREATE PROSPECT
         # ---------------------------------------------
 
+        prospect_data = {
+            "linkedin_url": raw_url,
+            "normalized_url": normalized_url,
+            "connect_status": "pending",
+            "message_status": "not_started",
+        }
+        if company_name:
+            prospect_data["company_name"] = company_name
+
         prospect_response = (
             active_client.table(
                 PROSPECT_TABLE
             )
-            .insert(
-                {
-                    "linkedin_url": raw_url,
-                    "normalized_url": normalized_url,
-                    "connect_status": "pending",
-                    "message_status": "not_started",
-                }
-            )
+            .insert(prospect_data)
             .execute()
         )
 

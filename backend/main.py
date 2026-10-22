@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.outreach_campaign_identity import campaign_id_for_name, connect_batch_label
+from app.outreach_connect_input import prepare_connect_entries
 from app.outreach_job_store import (
     MAX_CONNECT_URLS,
     OutreachJobStoreError,
@@ -624,11 +625,14 @@ async def create_outreach_connect_job(
             },
         )
 
-    cleaned_urls = [
-        str(url or "").strip()
-        for url in urls
-        if str(url or "").strip()
-    ]
+    company_names = body.get("company_names")
+    try:
+        entries = prepare_connect_entries(urls, company_names)
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"ok": False, "error": str(exc)})
+    cleaned_urls = [url for url, _ in entries]
+    if company_names is not None:
+        company_names = [name for _, name in entries]
 
     if not cleaned_urls:
         return JSONResponse(
@@ -684,6 +688,7 @@ async def create_outreach_connect_job(
             cleaned_urls,
             display_name=display_name,
             batch_name=batch_name,
+            company_names=company_names,
         )
 
     except OutreachJobStoreError as exc:
