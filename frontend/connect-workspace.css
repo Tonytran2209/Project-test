@@ -56,8 +56,7 @@
 
 #tab-outreach .outreach-connect-form { gap: 20px; }
 .connect-paste-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; }
-#tab-outreach .connect-paste-columns .outreach-url-field { min-width: 0; align-content: start; }
-#tab-outreach .connect-paste-columns .outreach-url-field > span { min-height: 36px; }
+#tab-outreach .connect-paste-columns .outreach-url-field { min-width: 0; grid-template-rows: 1fr auto; gap: 8px; }
 .outreach-company-field small { color: #999891; font-size: 11px; font-weight: 400; }
 .connect-company-match { margin: -8px 0 0; color: #858580; font-size: 12px; }
 .connect-company-match.is-error { color: #b54444; }
