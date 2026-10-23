@@ -35,12 +35,6 @@ const els = {
   sessionStatusList: document.querySelector("#sessionStatusList"),
   sessionStatusError: document.querySelector("#sessionStatusError"),
 
-  settingsButton: document.querySelector("#settingsButton"),
-  settingsModal: document.querySelector("#settingsModal"),
-  settingsCloseButton: document.querySelector("#settingsCloseButton"),
-  settingsDoneButton: document.querySelector("#settingsDoneButton"),
-  settingsRememberTab: document.querySelector("#settingsRememberTab"),
-  settingsReduceMotion: document.querySelector("#settingsReduceMotion"),
 
   totalProfiles: document.querySelector("#totalProfiles"),
   pendingCount: document.querySelector("#pendingCount"),
@@ -9637,14 +9631,7 @@ document
         setOutreachProcessTab(button.dataset.outreachProcessTab);
       }
 
-      const uiSettings = loadUiSettings();
-
-      if (uiSettings.rememberLastSection) {
-        localStorage.setItem(
-          LAST_TAB_STORAGE_KEY,
-          tabName
-        );
-      }
+      localStorage.setItem(LAST_TAB_STORAGE_KEY, tabName);
 
       if (button.dataset.tab === "profiles") {
         void loadOutreachProfiles();
@@ -9903,133 +9890,7 @@ function setOutreachProcessTab(
 
 
 
-// =========================================================
-// SETTINGS
-// =========================================================
-
-const SETTINGS_STORAGE_KEY = "linkedinOps.settings.v1";
 const LAST_TAB_STORAGE_KEY = "linkedinOps.lastTab";
-
-const DEFAULT_UI_SETTINGS = {
-  rememberLastSection: true,
-  reduceMotion: false
-};
-
-function loadUiSettings() {
-  try {
-    const saved = JSON.parse(
-      localStorage.getItem(SETTINGS_STORAGE_KEY) || "{}"
-    );
-
-    return {
-      ...DEFAULT_UI_SETTINGS,
-      ...(saved && typeof saved === "object" ? saved : {})
-    };
-  } catch (error) {
-    return { ...DEFAULT_UI_SETTINGS };
-  }
-}
-
-function saveUiSettings(settings) {
-  localStorage.setItem(
-    SETTINGS_STORAGE_KEY,
-    JSON.stringify(settings)
-  );
-}
-
-function applyUiSettings(settings) {
-  document.body.classList.toggle(
-    "reduce-motion",
-    Boolean(settings.reduceMotion)
-  );
-
-  if (els.settingsRememberTab) {
-    els.settingsRememberTab.checked =
-      Boolean(settings.rememberLastSection);
-  }
-
-  if (els.settingsReduceMotion) {
-    els.settingsReduceMotion.checked =
-      Boolean(settings.reduceMotion);
-  }
-}
-
-function updateUiSettingsFromControls() {
-  const settings = {
-    rememberLastSection: Boolean(
-      els.settingsRememberTab?.checked
-    ),
-    reduceMotion: Boolean(
-      els.settingsReduceMotion?.checked
-    )
-  };
-
-  saveUiSettings(settings);
-  applyUiSettings(settings);
-
-  if (!settings.rememberLastSection) {
-    localStorage.removeItem(
-      LAST_TAB_STORAGE_KEY
-    );
-  }
-}
-
-function openSettingsModal() {
-  if (!els.settingsModal) {
-    return;
-  }
-
-  applyUiSettings(loadUiSettings());
-
-  els.settingsModal.hidden = false;
-  document.body.classList.add("has-modal-open");
-}
-
-function closeSettingsModal() {
-  if (!els.settingsModal) {
-    return;
-  }
-
-  els.settingsModal.hidden = true;
-  document.body.classList.remove("has-modal-open");
-}
-
-els.settingsButton?.addEventListener(
-  "click",
-  openSettingsModal
-);
-
-els.settingsCloseButton?.addEventListener(
-  "click",
-  closeSettingsModal
-);
-
-els.settingsDoneButton?.addEventListener(
-  "click",
-  closeSettingsModal
-);
-
-els.settingsRememberTab?.addEventListener(
-  "change",
-  updateUiSettingsFromControls
-);
-
-els.settingsReduceMotion?.addEventListener(
-  "change",
-  updateUiSettingsFromControls
-);
-
-els.settingsModal
-  ?.querySelectorAll("[data-settings-close]")
-  .forEach((element) => {
-    element.addEventListener(
-      "click",
-      closeSettingsModal
-    );
-  });
-
-applyUiSettings(loadUiSettings());
-
 
 // =========================================================
 // OUTREACH LINKEDIN SESSION STATUS POPUP
@@ -11110,12 +10971,9 @@ document.addEventListener(
   (event) => {
     if (event.key === "Escape") {
       closeDrawer();
-      closeSettingsModal();
     }
   }
 );
-
-const initialUiSettings = loadUiSettings();
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "linkedin-ops.sidebar-collapsed";
 const appLayout = document.querySelector(".app-layout");
@@ -11187,7 +11045,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-if (initialUiSettings.rememberLastSection) {
+{
   const savedTab = localStorage.getItem(
     LAST_TAB_STORAGE_KEY
   );

@@ -13,9 +13,9 @@
     rel="stylesheet"
   />
 
-  <link rel="stylesheet" href="./styles.css?v=20260923-login-motion-4" />
-  <link rel="stylesheet" href="./outreach-stripe.css?v=20260924-notion-empty-1" />
-  <link rel="stylesheet" href="./sidebar.css?v=20260926-usage-guide-demo-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261023-remove-settings-1" />
+  <link rel="stylesheet" href="./outreach-stripe.css?v=20261023-remove-settings-1" />
+  <link rel="stylesheet" href="./sidebar.css?v=20261023-remove-settings-1" />
   <link rel="stylesheet" href="./workflow-nav.css?v=20260924-draggable-nav-1" />
   <link rel="stylesheet" href="./connect-workspace.css?v=20261023-match-dialog-style-1" />
   <link rel="stylesheet" href="./acceptance-workspace.css?v=20261006-acceptance-campaign-summary-1" />
@@ -135,17 +135,6 @@
             <span class="sidebar-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2"/></svg></span>
             <span class="sidebar-nav-text">Login Sessions</span>
             <span id="sessionStatusBadge" class="tab-count session-status-sidebar-badge">—</span>
-          </button>
-
-          <button
-            id="settingsButton"
-            class="tab-button sidebar-action-button"
-            type="button"
-            aria-haspopup="dialog"
-            aria-controls="settingsModal"
-          >
-            <span class="sidebar-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.2 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2v-4h.5a1.7 1.7 0 0 0 1.7-1.2 1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 8.6 4.2a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V2h4v.5a1.7 1.7 0 0 0 1.2 1.7 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 8.6a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4h.9v4h-.9a1.7 1.7 0 0 0-1.7 1Z"/></svg></span>
-            <span class="sidebar-nav-text">Settings</span>
           </button>
 
           <button id="usageGuideButton" class="tab-button sidebar-action-button" type="button" aria-haspopup="dialog" aria-controls="usageGuideDialog">
@@ -1368,115 +1357,6 @@
 
 
 
-  <!-- SETTINGS MODAL -->
-  <div id="settingsModal" class="message-send-modal settings-modal" hidden>
-    <div class="message-send-modal-backdrop" data-settings-close></div>
-
-    <section
-      class="message-send-dialog settings-dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="settingsTitle"
-    >
-      <div class="message-send-dialog-header settings-header">
-        <div>
-          <p class="panel-kicker">System preferences</p>
-          <h2 id="settingsTitle">Settings</h2>
-          <p class="panel-meta">
-            Local interface preferences and operational behavior for this console.
-          </p>
-        </div>
-
-        <button
-          id="settingsCloseButton"
-          class="close-button"
-          type="button"
-          aria-label="Close settings"
-        >
-          ×
-        </button>
-      </div>
-
-      <div class="message-send-dialog-body settings-body">
-        <section class="settings-section">
-          <div class="settings-section-heading">
-            <div>
-              <span class="settings-section-kicker">Interface</span>
-              <strong>Console behavior</strong>
-            </div>
-          </div>
-
-          <label class="settings-row">
-            <div class="settings-row-copy">
-              <strong>Remember last section</strong>
-              <span>Return to the last sidebar section when this browser opens again.</span>
-            </div>
-            <input id="settingsRememberTab" class="settings-switch-input" type="checkbox" />
-            <span class="settings-switch" aria-hidden="true"></span>
-          </label>
-
-          <label class="settings-row">
-            <div class="settings-row-copy">
-              <strong>Reduce motion</strong>
-              <span>Disable non-essential transitions and animations in the dashboard.</span>
-            </div>
-            <input id="settingsReduceMotion" class="settings-switch-input" type="checkbox" />
-            <span class="settings-switch" aria-hidden="true"></span>
-          </label>
-        </section>
-
-        <section class="settings-section">
-          <div class="settings-section-heading">
-            <div>
-              <span class="settings-section-kicker">Operations</span>
-              <strong>Runtime behavior</strong>
-            </div>
-          </div>
-
-          <div class="settings-info-row">
-            <span>Dashboard refresh</span>
-            <strong>Adaptive</strong>
-            <small>5s active · 45s idle</small>
-          </div>
-
-          <div class="settings-info-row">
-            <span>Login session checks</span>
-            <strong>Realtime</strong>
-            <small>Event-driven · no idle polling</small>
-          </div>
-
-          <div class="settings-info-row">
-            <span>Destructive actions</span>
-            <strong>Confirmation required</strong>
-            <small>Delete operations always require explicit confirmation.</small>
-          </div>
-        </section>
-
-        <section class="settings-section">
-          <div class="settings-section-heading">
-            <div>
-              <span class="settings-section-kicker">Recommended next</span>
-              <strong>Operational defaults</strong>
-            </div>
-          </div>
-
-          <div class="settings-note">
-            Next useful settings: weekly Connect quota, per-round batch size,
-            message defaults, and worker/session behavior. These should be
-            stored server-side instead of only in this browser.
-          </div>
-        </section>
-      </div>
-
-      <div class="message-send-dialog-footer settings-footer">
-        <span class="panel-meta">Preferences are saved in this browser.</span>
-        <button id="settingsDoneButton" class="secondary-button" type="button">
-          Done
-        </button>
-      </div>
-    </section>
-  </div>
-
   <!-- OUTREACH LOGIN SESSION STATUS MODAL -->
   <div
     id="sessionStatusModal"
@@ -1937,7 +1817,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./connect-input.js?v=20261023-match-preview-1"></script>
-  <script src="./app.js?v=20261023-reply-dropdown-1"></script>
+  <script src="./app.js?v=20261023-remove-settings-1"></script>
   <script src="./login.js?v=20260923-entry-3"></script>
   <script src="./usage-guide.js?v=20260926-replies-schedule-1"></script>
 </body>

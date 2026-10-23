@@ -193,10 +193,6 @@
   order: 2;
 }
 
-.sidebar-nav-group-bottom #settingsButton {
-  order: 3;
-}
-
 .sidebar-navigation .tab-button.is-active {
   border-color: #dfdfdc !important;
   background: #fff !important;
