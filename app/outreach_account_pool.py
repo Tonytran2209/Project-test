@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,6 +20,10 @@ DEFAULT_OUTREACH_ACCOUNT_IDS = (
     "outreach_account_05",
     "outreach_account_06",
     "outreach_account_07",
+)
+
+LEGACY_OUTREACH_ACCOUNT_IDS = frozenset(
+    f"outreach_account_{number:02d}" for number in range(1, 6)
 )
 
 
@@ -129,6 +134,18 @@ def _read_outreach_account_ids(
             "OUTREACH_ACCOUNT_IDS does not "
             "contain any valid account ID"
         )
+
+    # Older .env files explicitly listed the original complete pool. Expand
+    # that legacy configuration as the registered pool grows. Intentional
+    # smaller/custom pools still keep their configured membership and order.
+    if LEGACY_OUTREACH_ACCOUNT_IDS.issubset(seen) and seen.issubset(DEFAULT_OUTREACH_ACCOUNT_IDS):
+        additions = [account_id for account_id in DEFAULT_OUTREACH_ACCOUNT_IDS if account_id not in seen]
+        account_ids.extend(additions)
+        if additions:
+            logging.getLogger(__name__).warning(
+                "Upgrading legacy OUTREACH_ACCOUNT_IDS configuration; added: %s",
+                ", ".join(additions),
+            )
 
     return tuple(account_ids)
 

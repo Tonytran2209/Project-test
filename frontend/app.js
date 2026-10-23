@@ -10234,6 +10234,12 @@ function setupSessionStatusRealtime() {
     .subscribe((status) => {
       state.sessionStatusRealtimeReady = status === "SUBSCRIBED";
 
+      if (status === "SUBSCRIBED" && !els.sessionStatusModal?.hidden) {
+        // Reconcile once after connecting so missed worker updates do not
+        // leave the UI stuck on Queued. No background polling is needed.
+        void loadSessionStatuses();
+      }
+
       if (status === "CHANNEL_ERROR") {
         console.warn(
           "LinkedIn session Realtime channel error. " +

@@ -3,7 +3,7 @@ import importlib.util
 from pathlib import Path
 import sys
 import unittest
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 
@@ -29,6 +29,24 @@ def load_worker():
 
 
 class SessionWorkerErrorsTest(unittest.IsolatedAsyncioTestCase):
+    async def test_checks_sixth_and_seventh_account_profiles(self):
+        worker = load_worker()
+        accounts = [SimpleNamespace(account_id=f"outreach_account_{number:02d}") for number in (6, 7)]
+        pool = MagicMock()
+        pool.get_account.side_effect = accounts
+        worker.check_outreach_account_session.return_value = SimpleNamespace(
+            status="logged_in", current_url="https://www.linkedin.com/feed/", detail=None
+        )
+        with patch.object(worker, "claim_session_check", AsyncMock(return_value=True)), patch.object(
+            worker, "complete_session_check", AsyncMock()
+        ) as completed, patch.object(worker, "fail_session_check", AsyncMock()) as failed, patch.object(worker, "logger"):
+            for account in accounts:
+                await worker.process_account(object(), pool, account.account_id)
+        self.assertEqual([call.args[0] for call in worker.check_outreach_account_session.call_args_list], accounts)
+        self.assertEqual([call.kwargs["account_id"] for call in completed.await_args_list],
+                         ["outreach_account_06", "outreach_account_07"])
+        failed.assert_not_awaited()
+
     async def test_unknown_account_is_reported_without_crashing(self):
         worker = load_worker()
         pool = MagicMock()

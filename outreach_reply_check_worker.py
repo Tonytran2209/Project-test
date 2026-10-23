@@ -32,7 +32,6 @@ from urllib.parse import urljoin
 from playwright.sync_api import Frame, Locator, Page
 
 from app.outreach_account_pool import (
-    DEFAULT_OUTREACH_ACCOUNT_IDS,
     OUTREACH_ACCOUNT_DISPLAY_NAMES,
     OutreachAccountPool,
 )
@@ -1764,7 +1763,8 @@ def run_all_accounts() -> list[str]:
     """Scan all registered profiles sequentially, continuing after account errors."""
 
     failed_accounts: list[str] = []
-    for account_id in DEFAULT_OUTREACH_ACCOUNT_IDS:
+    account_ids = [account.account_id for account in OutreachAccountPool().accounts]
+    for account_id in account_ids:
         logger.info("Reply check starting | account=%s", account_id)
         try:
             run_once(account_id)
@@ -1778,7 +1778,7 @@ def run_all_accounts() -> list[str]:
             ", ".join(failed_accounts),
         )
     else:
-        logger.info("Reply check finished for all %s accounts", len(DEFAULT_OUTREACH_ACCOUNT_IDS))
+        logger.info("Reply check finished for all %s accounts", len(account_ids))
     return failed_accounts
 
 
