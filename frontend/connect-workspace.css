@@ -63,18 +63,23 @@
 #tab-outreach button.connect-match-check { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 28px; width: 28px; height: 28px !important; min-height: 28px; margin: 0; padding: 0 !important; border: 0 !important; border-radius: 6px !important; background: transparent !important; box-shadow: none !important; color: #858580 !important; cursor: pointer; }
 #tab-outreach button.connect-match-check:hover { color: #0a66c2 !important; background: #f1f1ef !important; }
 #tab-outreach button.connect-match-check:focus-visible { outline: 2px solid #8fbbe9; outline-offset: 2px; }
-dialog.connect-match-dialog { width: min(780px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: 80vh; padding: 0; overflow: hidden; border: 1px solid #e6e6e2; border-radius: 12px; background: #fff; color: #37352f; box-shadow: 0 20px 70px rgb(0 0 0 / 18%); color-scheme: light; }
-dialog.connect-match-dialog[open] { display: flex; flex-direction: column; }
-.connect-match-dialog::backdrop { background: rgb(0 0 0 / 25%); }
-.connect-match-header { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid #e9e9e7; }
-.connect-match-header h2 { margin: 0; color: #37352f; font-size: 16px; font-weight: 600; }
-.connect-match-dialog button.connect-match-close { display: grid; place-items: center; width: 32px; height: 32px; min-height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #858580; font-size: 24px; line-height: 1; cursor: pointer; }
-.connect-match-dialog button.connect-match-close:hover { background: #f1f1ef; }
-.connect-match-scroll { min-height: 0; overflow: auto; }
-.connect-match-table { width: 100%; margin: 0; border-collapse: collapse; table-layout: fixed; font-size: 13px; text-align: left; }
-.connect-match-table th, .connect-match-table td { width: 50%; padding: 12px 20px; border-bottom: 1px solid #efefed; color: #37352f; vertical-align: top; overflow-wrap: anywhere; }
-.connect-match-table th { position: sticky; top: 0; z-index: 1; background: #fafaf9; color: #858580; font-size: 12px; font-weight: 500; }
-.connect-match-table tbody tr:last-child td { border-bottom: 0; }
+#outreachMatchDialog { width: min(780px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: min(80dvh, 760px); padding: 0; overflow: hidden; border: 1px solid #e8e8e5; border-radius: 14px; background: #fff; color: #37352f; box-shadow: 0 24px 70px rgb(0 0 0 / 18%); color-scheme: light; }
+#outreachMatchDialog[open] { display: flex; flex-direction: column; }
+#outreachMatchDialog::backdrop { background: rgb(0 0 0 / 38%); }
+#outreachMatchDialog .connect-match-header { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid #e8e8e5; background: #fff; }
+#outreachMatchDialog h2 { margin: 0; color: #252521; font-size: 20px; font-weight: 650; letter-spacing: -.03em; }
+#outreachMatchDialog .connect-match-close { display: grid; flex: 0 0 36px; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 0; border: 1px solid #e8e8e5; border-radius: 8px; background: #fff; box-shadow: none; color: #62615c; cursor: pointer; }
+#outreachMatchDialog .connect-match-close:hover { border-color: #d3d3ce; background: #f7f7f5; color: #37352f; }
+#outreachMatchDialog .connect-match-close:focus-visible { outline: 2px solid #8fbbe9 !important; outline-offset: 2px; }
+#outreachMatchDialog .connect-match-body { display: flex; min-height: 0; padding: 20px 24px 24px; }
+#outreachMatchDialog .connect-match-scroll { width: 100%; min-height: 0; overflow: auto; overscroll-behavior: contain; border: 1px solid #e8e8e5; border-radius: 8px; }
+#outreachMatchDialog table { width: 100%; min-width: 0; margin: 0; border: 0; border-collapse: collapse; table-layout: fixed; background: #fff; text-align: left; }
+#outreachMatchDialog th, #outreachMatchDialog td { width: 50%; height: auto; min-height: 0; padding: 12px 14px !important; border: 0 !important; border-bottom: 1px solid #e8e8e5 !important; color: #37352f !important; font-size: 13px !important; font-weight: 400; line-height: 1.5; vertical-align: top; white-space: normal; overflow-wrap: anywhere; }
+#outreachMatchDialog thead { background: #f7f7f5; }
+#outreachMatchDialog th { position: sticky; top: 0; z-index: 1; padding: 10px 14px !important; background: #f7f7f5 !important; color: #62615c !important; font-size: 12px !important; font-weight: 600 !important; letter-spacing: 0; text-transform: none; }
+#outreachMatchDialog tbody tr { background: #fff !important; }
+#outreachMatchDialog tbody tr:hover { background: #fafaf9 !important; }
+#outreachMatchDialog tbody tr:last-child td { border-bottom: 0 !important; }
 .connect-company-match { margin: -8px 0 0; color: #858580; font-size: 12px; }
 .connect-company-match.is-error { color: #b54444; }
 .connect-name-field,
