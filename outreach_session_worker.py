@@ -337,16 +337,17 @@ async def process_account(
     if not claimed:
         return
 
-    account = pool.get_account(
-        account_id
-    )
-
-    logger.info(
-        "Checking LinkedIn session: %s",
-        account_id,
-    )
-
     try:
+        try:
+            account = pool.get_account(account_id)
+        except KeyError as exc:
+            raise RuntimeError(
+                f"{account_id} is not in this worker's configured accounts. "
+                "Pull the latest code, check OUTREACH_ACCOUNT_IDS in .env "
+                "or the shell environment, then restart the worker."
+            ) from exc
+
+        logger.info("Checking LinkedIn session: %s", account_id)
         # Playwright/browser manager in this repo is synchronous.
         # Run it off the asyncio event loop so the Realtime websocket stays
         # alive while Chromium is being checked.
@@ -403,6 +404,9 @@ async def worker_loop(
                 item,
             )
 
+        except Exception:
+            logger.exception("Session worker request failed | account=%s", item)
+
         finally:
             if item != _RECOVER_PENDING:
                 _finish_account(
@@ -447,6 +451,11 @@ async def run_forever() -> None:
     logger.info(
         "Outreach Session Worker started — "
         "Async Realtime mode, no polling."
+    )
+    logger.info(
+        "Configured Outreach accounts (%s): %s",
+        len(pool.accounts),
+        ", ".join(account.account_id for account in pool.accounts),
     )
 
     channel = (
