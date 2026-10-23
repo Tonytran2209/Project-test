@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from supabase import Client, create_client
 
 from app.settings import load_settings
+from app.linkedin_message_template import build_message, template_uses_company
+from app.outreach_message_company import attach_target_companies
 
 
 MESSAGE_BATCH_TABLE = (
@@ -175,7 +177,7 @@ def queue_message_batch(
             MESSAGE_TARGET_TABLE
         )
         .select(
-            "id"
+            "id,prospect_id,linkedin_url,normalized_url"
         )
         .eq(
             "batch_id",
@@ -197,6 +199,20 @@ def queue_message_batch(
         raise OutreachMessageQueueStoreError(
             "Message batch has no prepared targets."
         )
+
+    try:
+        build_message("Recipient", cleaned_template, company="Company")
+        if template_uses_company(cleaned_template):
+            attach_target_companies(prepared_targets, client=active_client)
+            missing = [target for target in prepared_targets if not target.get("company_name")]
+            if missing:
+                example = missing[0].get("linkedin_url") or missing[0].get("id")
+                raise ValueError(
+                    f"{len(missing)} recipients have no saved company name (e.g. {example}). "
+                    "Add their company names or remove {company} from the template."
+                )
+    except ValueError as exc:
+        raise OutreachMessageQueueStoreError(str(exc)) from exc
 
     # -----------------------------------------------------
     # CONDITIONAL QUEUE

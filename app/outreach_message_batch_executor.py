@@ -11,7 +11,9 @@ from app.linkedin_message_sender import (
 )
 from app.linkedin_message_template import (
     build_message,
+    template_uses_company,
 )
+from app.outreach_message_company import company_for_target
 from app.linkedin_profile_message import (
     get_profile_name,
 )
@@ -436,6 +438,7 @@ def execute_target_with_browser(
     final_message: str | None = None
 
     try:
+        company = company_for_target(claimed, client=client) if template_uses_company(template) else ""
         page = browser.open_linkedin_url(
             linkedin_url
         )
@@ -451,6 +454,7 @@ def execute_target_with_browser(
                 ]
             ),
             template=template,
+            company=company,
         )
 
         send_result = send_message_once(

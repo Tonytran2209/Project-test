@@ -6671,6 +6671,7 @@ async function openPreparedMessageBatch(batchId) {
                       target.assigned_account_id
                     )
                   )}</span>
+                  <div>
                   <a
                     href="${escapeHtml(target.linkedin_url || "")}"
                     target="_blank"
@@ -6678,6 +6679,8 @@ async function openPreparedMessageBatch(batchId) {
                   >
                     ${escapeHtml(target.linkedin_url || "—")}
                   </a>
+                  <p class="panel-meta">Company: ${escapeHtml(target.company_name || "Not saved")}</p>
+                  </div>
                 </div>
               `).join("")
             : '<div class="state">This batch has no recipients.</div>'

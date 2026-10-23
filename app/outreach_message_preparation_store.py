@@ -12,6 +12,7 @@ from app.outreach_campaign_identity import (
     campaign_id_for_name, connect_batch_label, connect_batch_name,
 )
 from app.settings import load_settings
+from app.outreach_message_company import attach_target_companies
 
 
 MESSAGE_BATCH_TABLE = (
@@ -1148,6 +1149,7 @@ def get_prepared_message_batch(
     )
 
     targets = [dict(row) for row in list(target_response.data or [])]
+    attach_target_companies(targets, client=active_client)
     _attach_connect_identity_to_targets(client=active_client, targets=targets)
     batch["targets"] = targets
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from string import Formatter
+
 
 DEFAULT_MESSAGE_TEMPLATE = """Hi {first_name},
 
@@ -10,12 +12,15 @@ I wanted to reach out regarding...
 def build_message(
     first_name: str,
     template: str | None = None,
+    *,
+    company: str = "",
 ) -> str:
     """
     STEP 3B — personalize a message.
 
-    Current supported variable:
+    Supported variables:
         {first_name}
+        {company}
 
     This function only returns text.
     It does NOT interact with LinkedIn.
@@ -48,13 +53,18 @@ def build_message(
             "Message template cannot be empty."
         )
 
+    cleaned_company = str(company or "").strip()
+    if template_uses_company(active_template) and not cleaned_company:
+        raise ValueError("This recipient has no saved company name. Add it before using {company}.")
+
     try:
         message = (
             active_template
             .format(
                 first_name=(
                     cleaned_first_name
-                )
+                ),
+                company=cleaned_company,
             )
         )
 
@@ -65,3 +75,7 @@ def build_message(
         ) from exc
 
     return message
+
+
+def template_uses_company(template: str) -> bool:
+    return any(field == "company" for _, field, _, _ in Formatter().parse(template))
