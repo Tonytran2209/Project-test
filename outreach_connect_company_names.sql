@@ -1,4 +1,5 @@
 -- Run in Supabase SQL Editor before using the Connect company-name column.
+
 alter table public.outreach_prospects
   add column if not exists company_name text;
 
