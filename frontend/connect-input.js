@@ -31,5 +31,16 @@
     return {urls, companyNames: hasCompanies ? companyNames : null, error};
   }
 
-  root.ConnectInput = {parse};
+  function preview(rawUrls, rawCompanies) {
+    const result = parse(rawUrls, rawCompanies);
+    const companies = result.companyNames || [];
+    const rows = Array.from({length: Math.max(result.urls.length, companies.length)}, (_, index) => {
+      const url = result.urls[index] || "";
+      const company = companies[index] || "";
+      return {url, company};
+    });
+    return {...result, rows};
+  }
+
+  root.ConnectInput = {parse, preview};
 })(globalThis);

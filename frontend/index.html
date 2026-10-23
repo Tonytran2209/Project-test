@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="./outreach-stripe.css?v=20260924-notion-empty-1" />
   <link rel="stylesheet" href="./sidebar.css?v=20260926-usage-guide-demo-1" />
   <link rel="stylesheet" href="./workflow-nav.css?v=20260924-draggable-nav-1" />
-  <link rel="stylesheet" href="./connect-workspace.css?v=20261023-company-gap-1" />
+  <link rel="stylesheet" href="./connect-workspace.css?v=20261023-match-preview-1" />
   <link rel="stylesheet" href="./acceptance-workspace.css?v=20261006-acceptance-campaign-summary-1" />
   <link rel="stylesheet" href="./recipients-workspace.css?v=20261007-recipient-campaign-3" />
   <link rel="stylesheet" href="./messages-workspace.css?v=20260924-messages-grid-2" />
@@ -870,8 +870,13 @@
             required
           ></textarea>
         </label>
-        <label class="outreach-url-field outreach-company-field" for="outreachCompanyInput">
-          <span>Company names <small>Optional</small></span>
+        <div class="outreach-url-field outreach-company-field">
+          <span class="connect-company-heading">
+            <label for="outreachCompanyInput">Company names <small>Optional</small></label>
+            <button id="outreachMatchPreviewButton" class="connect-match-check" type="button" aria-label="Review URL and company matching" title="Review URL and company matching" aria-haspopup="dialog" aria-controls="outreachMatchDialog">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </span>
           <textarea
             id="outreachCompanyInput"
             rows="3"
@@ -880,7 +885,7 @@
             placeholder="One company per line, in the same order"
             spellcheck="false"
           ></textarea>
-        </label>
+        </div>
         </div>
         <p id="outreachCompanyMatch" class="connect-company-match" role="status" hidden></p>
 
@@ -1779,6 +1784,16 @@
   </aside>
 
   </div>
+  <dialog id="outreachMatchDialog" class="connect-match-dialog" aria-labelledby="outreachMatchTitle">
+    <header class="connect-match-header">
+      <h2 id="outreachMatchTitle">URL &amp; Company</h2>
+      <button class="connect-match-close" type="button" data-connect-match-close aria-label="Close matching preview">×</button>
+    </header>
+    <div class="connect-match-scroll">
+      <table class="connect-match-table"><thead><tr><th scope="col">LinkedIn URL</th><th scope="col">Company</th></tr></thead><tbody id="outreachMatchRows"></tbody></table>
+    </div>
+  </dialog>
+
   <dialog id="usageGuideDialog" class="usage-guide-dialog" aria-labelledby="usageGuideTitle" aria-describedby="usageGuideDescription">
     <div class="usage-guide-header">
       <div class="usage-guide-header-copy">
@@ -1918,8 +1933,8 @@
   </dialog>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
-  <script src="./connect-input.js?v=20261022-company-columns-1"></script>
-  <script src="./app.js?v=20261023-seven-accounts-1"></script>
+  <script src="./connect-input.js?v=20261023-match-preview-1"></script>
+  <script src="./app.js?v=20261023-match-preview-1"></script>
   <script src="./login.js?v=20260923-entry-3"></script>
   <script src="./usage-guide.js?v=20260926-replies-schedule-1"></script>
 </body>

@@ -106,6 +106,9 @@ const els = {
     document.querySelector("#outreachCompanyInput"),
   outreachCompanyMatch:
     document.querySelector("#outreachCompanyMatch"),
+  outreachMatchPreviewButton: document.querySelector("#outreachMatchPreviewButton"),
+  outreachMatchDialog: document.querySelector("#outreachMatchDialog"),
+  outreachMatchRows: document.querySelector("#outreachMatchRows"),
 
   outreachCampaignSelect:
     document.querySelector("#outreachCampaignSelect"),
@@ -1780,6 +1783,11 @@ function parseOutreachUrls() {
 
 function parseOutreachInput() {
   return ConnectInput.parse(els.outreachUrlInput?.value, els.outreachCompanyInput?.value);
+}
+
+function renderConnectMatchPreview() {
+  const result = ConnectInput.preview(els.outreachUrlInput?.value, els.outreachCompanyInput?.value);
+  els.outreachMatchRows.innerHTML = result.rows.map(row => `<tr><td>${escapeHtml(row.url)}</td><td>${escapeHtml(row.company)}</td></tr>`).join("");
 }
 
 function selectedConnectCampaign() {
@@ -10559,6 +10567,20 @@ els.outreachUrlInput?.addEventListener(
   updateOutreachDetectedCount
 );
 els.outreachCompanyInput?.addEventListener("input", updateOutreachDetectedCount);
+els.outreachMatchPreviewButton?.addEventListener("click", () => {
+  renderConnectMatchPreview();
+  els.outreachMatchDialog.showModal();
+});
+document.querySelectorAll("[data-connect-match-close]").forEach(button => {
+  button.addEventListener("click", () => els.outreachMatchDialog.close());
+});
+els.outreachMatchDialog?.addEventListener("click", event => {
+  if (event.target !== els.outreachMatchDialog) return;
+  const rect = els.outreachMatchDialog.getBoundingClientRect();
+  if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) {
+    els.outreachMatchDialog.close();
+  }
+});
 for (const [source, target] of [[els.outreachUrlInput, els.outreachCompanyInput], [els.outreachCompanyInput, els.outreachUrlInput]]) {
   source?.addEventListener("scroll", () => {
     if (target && target.scrollTop !== source.scrollTop) target.scrollTop = source.scrollTop;

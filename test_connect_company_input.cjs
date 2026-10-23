@@ -1,7 +1,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 require('./frontend/connect-input.js');
-const {parse} = globalThis.ConnectInput;
+const {parse, preview} = globalThis.ConnectInput;
 const a = 'https://linkedin.com/in/a';
 const b = 'https://linkedin.com/in/b';
 
@@ -28,4 +28,16 @@ test('duplicates retain original company positions until backend processing', ()
 });
 test('URL-only workflow still accepts a comma-separated list', () => {
   assert.deepEqual(parse(`${a}, ${b}`, ''), {urls: [a, b], companyNames: null, error: ''});
+});
+
+test('preview shows the same row pairs as submission without status decorations', () => {
+  assert.deepEqual(preview(`${a}\n${b}`, 'A, Inc.\nB & Co').rows, [
+    {url: a, company: 'A, Inc.'}, {url: b, company: 'B & Co'}
+  ]);
+});
+test('preview preserves interior blanks and unpaired companies', () => {
+  assert.deepEqual(preview(`${a}\n\n${b}`, 'A\nB\nC\nD').rows, [
+    {url: a, company: 'A'}, {url: '', company: 'B'},
+    {url: b, company: 'C'}, {url: '', company: 'D'}
+  ]);
 });
