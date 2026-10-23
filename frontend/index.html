@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="./acceptance-workspace.css?v=20261006-acceptance-campaign-summary-1" />
   <link rel="stylesheet" href="./recipients-workspace.css?v=20261007-recipient-campaign-3" />
   <link rel="stylesheet" href="./messages-workspace.css?v=20260924-messages-grid-2" />
-  <link rel="stylesheet" href="./replies-workspace.css?v=20261006-last-scan-3" />
+  <link rel="stylesheet" href="./replies-workspace.css?v=20261023-account-dropdown-1" />
   <link rel="stylesheet" href="./campaigns-workspace.css?v=20261008-performance-2" />
   <link rel="stylesheet" href="./login.css?v=20260923-login-motion-4" />
   <link rel="stylesheet" href="./acceptance-insights.css?v=20260923-light-insights-table-6" />
@@ -1324,12 +1324,13 @@
         </div>
 
         <div class="outreach-reply-toolbar">
-          <div
-            id="outreachReplyAccountTabs"
-            class="outreach-reply-account-tabs"
-            role="tablist"
-            aria-label="Outreach accounts"
-          ></div>
+          <div class="connect-custom-select outreach-reply-account-dropdown">
+            <select id="outreachReplyAccountSelect" hidden></select>
+            <button id="outreachReplyAccountTrigger" class="connect-custom-select-trigger" type="button" aria-label="Outreach account" aria-haspopup="menu" aria-expanded="false" aria-controls="outreachReplyAccountMenu">
+              <span id="outreachReplyAccountValue">—</span><span id="outreachReplyAccountCount" class="outreach-reply-account-count" hidden></span><span class="connect-custom-select-chevron" aria-hidden="true"></span>
+            </button>
+            <div id="outreachReplyAccountMenu" class="connect-custom-select-menu" role="menu" hidden></div>
+          </div>
           <div class="outreach-reply-check-actions">
             <div class="outreach-reply-check-meta">
               <span id="outreachReplyLastScan" class="panel-meta" role="status" aria-live="polite">Last scan: —</span>
@@ -1934,7 +1935,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./connect-input.js?v=20261023-match-preview-1"></script>
-  <script src="./app.js?v=20261023-account-pool-sync-1"></script>
+  <script src="./app.js?v=20261023-reply-dropdown-1"></script>
   <script src="./login.js?v=20260923-entry-3"></script>
   <script src="./usage-guide.js?v=20260926-replies-schedule-1"></script>
 </body>

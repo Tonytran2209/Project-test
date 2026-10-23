@@ -621,8 +621,11 @@ const els = {
   outreachReplyTabCount:
     document.querySelector("#outreachReplyTabCount"),
 
-  outreachReplyAccountTabs:
-    document.querySelector("#outreachReplyAccountTabs"),
+  outreachReplyAccountSelect: document.querySelector("#outreachReplyAccountSelect"),
+  outreachReplyAccountTrigger: document.querySelector("#outreachReplyAccountTrigger"),
+  outreachReplyAccountMenu: document.querySelector("#outreachReplyAccountMenu"),
+  outreachReplyAccountValue: document.querySelector("#outreachReplyAccountValue"),
+  outreachReplyAccountCount: document.querySelector("#outreachReplyAccountCount"),
 
   outreachReplyError:
     document.querySelector("#outreachReplyError"),
@@ -1623,6 +1626,15 @@ const OUTREACH_ACTIVE_POLL_INTERVAL_MS = 5000;
 const OUTREACH_IDLE_POLL_INTERVAL_MS = 45000;
 const OUTREACH_MAX_CONNECT_URLS = 150;
 const NEW_CONNECT_CAMPAIGN = "__new__";
+const replyAccountDropdown = {
+  select: els.outreachReplyAccountSelect,
+  trigger: els.outreachReplyAccountTrigger,
+  menu: els.outreachReplyAccountMenu,
+  value: els.outreachReplyAccountValue,
+  badge: els.outreachReplyAccountCount,
+  count: (option) => option.dataset.count || "0",
+  emptyLabel: "—"
+};
 const connectDropdowns = [
   {
     select: els.outreachCampaignSelect,
@@ -1669,7 +1681,8 @@ const connectDropdowns = [
     description: (option) => option.value
       ? "Show Connect batches from this day" : "Show every day in this campaign",
     icon: () => "▦"
-  }
+  },
+  replyAccountDropdown
 ];
 
 function closeConnectDropdown(dropdown, restoreFocus = false) {
@@ -1684,9 +1697,14 @@ function renderConnectDropdown(dropdown) {
   if (!select || !trigger || !menu || !value) return;
   const options = [...select.options];
   const selected = options.find((option) => option.value === select.value) || options[0];
-  value.textContent = selected?.textContent || "";
+  value.textContent = selected?.textContent || dropdown.emptyLabel || "";
+  if (dropdown.badge) {
+    dropdown.badge.textContent = selected ? dropdown.count(selected) : "";
+    dropdown.badge.hidden = !selected;
+    trigger.disabled = !selected;
+  }
   trigger.classList.toggle("is-placeholder", !select.value);
-  const signature = JSON.stringify(options.map((option) => [option.value, option.textContent]));
+  const signature = JSON.stringify(options.map((option) => [option.value, option.textContent, dropdown.count?.(option)]));
   if (menu.dataset.optionsSignature !== signature) {
     menu.replaceChildren();
     for (const option of options) {
@@ -1695,18 +1713,31 @@ function renderConnectDropdown(dropdown) {
       item.className = "connect-custom-select-option";
       item.setAttribute("role", "menuitemradio");
       item.dataset.value = option.value;
-      const icon = document.createElement("span");
-      icon.className = "connect-custom-select-icon";
-      icon.setAttribute("aria-hidden", "true");
-      icon.textContent = dropdown.icon(option);
+      if (dropdown.icon) {
+        const icon = document.createElement("span");
+        icon.className = "connect-custom-select-icon";
+        icon.setAttribute("aria-hidden", "true");
+        icon.textContent = dropdown.icon(option);
+        item.append(icon);
+      }
       const copy = document.createElement("span");
       copy.className = "connect-custom-select-copy";
       const title = document.createElement("strong");
       title.textContent = option.textContent;
-      const description = document.createElement("small");
-      description.textContent = dropdown.description(option);
-      copy.append(title, description);
-      item.append(icon, copy);
+      copy.append(title);
+      const descriptionText = dropdown.description?.(option);
+      if (descriptionText) {
+        const description = document.createElement("small");
+        description.textContent = descriptionText;
+        copy.append(description);
+      }
+      item.append(copy);
+      if (dropdown.count) {
+        const badge = document.createElement("span");
+        badge.className = "outreach-reply-account-count";
+        badge.textContent = dropdown.count(option);
+        item.append(badge);
+      }
       item.addEventListener("click", () => {
         select.value = option.value;
         select.dispatchEvent(new Event("change", { bubbles: true }));
@@ -8827,28 +8858,17 @@ function renderOutreachReplyInbox() {
   }
   if (els.outreachReplyTabCount) els.outreachReplyTabCount.textContent =
     String(Array.from(replyCounts.values()).reduce((total, count) => total + count, 0));
-  els.outreachReplyAccountTabs?.replaceChildren();
-  accounts.forEach((account) => {
-    const count = replyCounts.get(account.id) ?? replies.filter((reply) =>
-      String(reply.assigned_account_id || "").trim() === account.id
-    ).length;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "outreach-reply-account-tab";
-    button.classList.toggle("is-active", account.id === state.outreachReplySelectedAccountId);
-    button.setAttribute("role", "tab");
-    button.setAttribute("aria-selected", String(account.id === state.outreachReplySelectedAccountId));
-    button.innerHTML = `<strong>${escapeHtml(account.name)}</strong><span>${count}</span>`;
-    button.addEventListener("click", () => {
-      state.outreachReplySelectedAccountId = account.id;
-      renderOutreachReplies();
-      if (!state.outreachReplyLoadedByAccount[account.id] ||
-          state.outreachReplyLoadErrorByAccount[account.id]) {
-        void loadMoreOutreachReplies(account.id);
-      }
+  if (els.outreachReplyAccountSelect) {
+    const options = accounts.map(account => {
+      const option = new Option(account.name, account.id);
+      option.dataset.count = String(replyCounts.get(account.id) ?? replies.filter(reply =>
+        String(reply.assigned_account_id || "").trim() === account.id).length);
+      return option;
     });
-    els.outreachReplyAccountTabs?.appendChild(button);
-  });
+    els.outreachReplyAccountSelect.replaceChildren(...options);
+    els.outreachReplyAccountSelect.value = state.outreachReplySelectedAccountId || "";
+    renderConnectDropdown(replyAccountDropdown);
+  }
 
   if (!els.outreachReplyList || !els.outreachReplyConversation || !els.outreachReplyInbox) return;
   const previousListAccount = els.outreachReplyList.dataset.accountId;
@@ -10601,6 +10621,14 @@ document.querySelector("#outreachReplyCheckButton")?.addEventListener("click", (
   void requestOutreachReplyCheck();
 });
 for (const dropdown of connectDropdowns) setupConnectDropdown(dropdown);
+els.outreachReplyAccountSelect?.addEventListener("change", () => {
+  const accountId = els.outreachReplyAccountSelect.value;
+  state.outreachReplySelectedAccountId = accountId;
+  renderOutreachReplies();
+  if (!state.outreachReplyLoadedByAccount[accountId] || state.outreachReplyLoadErrorByAccount[accountId]) {
+    void loadMoreOutreachReplies(accountId);
+  }
+});
 document.addEventListener("click", (event) => {
   for (const dropdown of connectDropdowns) {
     if (!dropdown.trigger?.parentElement?.contains(event.target)) closeConnectDropdown(dropdown);

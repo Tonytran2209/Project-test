@@ -15,12 +15,21 @@
 #tab-replies .outreach-reply-check-actions #outreachReplyLastScan { margin: 0; color: #62615c !important; font-size: 12px; font-weight: 500; text-align: right; white-space: nowrap; }
 #tab-replies .outreach-reply-check-actions #outreachReplyCheckStatus { margin: 0; color: #858580 !important; font-size: 11px; text-align: right; }
 #tab-replies .outreach-reply-check-actions #outreachReplyCheckStatus:empty { display: none; }
-#tab-replies .outreach-reply-account-tabs { display: flex; flex: 0 1 auto; min-width: 0; width: max-content; gap: 8px; overflow-x: auto; margin: 0; padding: 8px 0; background: #fff; }
-#tab-replies .outreach-reply-account-tab { flex: 0 0 auto; width: 148px; min-height: 40px; padding: 7px 10px; border: 1px solid #e8e8e5; border-radius: 9px; color: #62615c; background: #fff; transition: background .16s, border-color .16s; }
-#tab-replies .outreach-reply-account-tab:hover { background: #f7f7f5; border-color: #dcdcd7; }
-#tab-replies .outreach-reply-account-tab.is-active { color: #252521; border-color: #37352f; background: #f7f7f5; box-shadow: none; }
-#tab-replies .outreach-reply-account-tab span { flex: none; min-width: 25px; height: 25px; border-radius: 100px; color: #fff; background: #0a66c2; font-size: 11px; font-weight: 700; }
-#tab-replies .outreach-reply-account-tab.is-active span { color: #fff; background: #0a66c2; }
+#tab-replies .outreach-reply-account-dropdown { position: relative; flex: 0 1 260px; width: 260px; min-width: 190px; }
+#tab-replies .outreach-reply-account-dropdown select[hidden] { display: none !important; }
+#tab-replies .outreach-reply-account-dropdown .connect-custom-select-trigger { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 12px; padding: 8px 14px; border: 1px solid #deded9; border-radius: 12px; background: #fff; color: #37352f; box-shadow: none; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+#tab-replies #outreachReplyAccountValue { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+#tab-replies .outreach-reply-account-dropdown .connect-custom-select-trigger:hover,
+#tab-replies .outreach-reply-account-dropdown .connect-custom-select-trigger[aria-expanded="true"] { border-color: #bcbcb5; background: #fafafa; }
+#tab-replies .outreach-reply-account-dropdown button:focus-visible { outline: 2px solid #c9e0fa; outline-offset: 2px; }
+#tab-replies .outreach-reply-account-dropdown .connect-custom-select-menu { position: absolute; z-index: 50; top: calc(100% + 8px); left: 0; display: grid; width: 100%; max-height: 340px; gap: 2px; overflow-y: auto; padding: 8px; border: 1px solid #e9e9e7; border-radius: 16px; background: #fff; box-shadow: 0 16px 38px rgb(27 27 24 / 15%), 0 2px 8px rgb(27 27 24 / 6%); }
+#tab-replies .outreach-reply-account-dropdown .connect-custom-select-option { display: flex; width: 100%; min-height: 40px; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 0; border-radius: 10px; background: transparent; color: #37352f; box-shadow: none; text-align: left; cursor: pointer; }
+#tab-replies .outreach-reply-account-dropdown .connect-custom-select-copy { flex: 1; min-width: 0; }
+#tab-replies .outreach-reply-account-dropdown .connect-custom-select-copy strong { color: #37352f; font-size: 13px; font-weight: 500; }
+#tab-replies .outreach-reply-account-dropdown .connect-custom-select-option:hover,
+#tab-replies .outreach-reply-account-dropdown .connect-custom-select-option:focus-visible { background: #f1f1ef; }
+#tab-replies .outreach-reply-account-dropdown .connect-custom-select-option.is-selected { background: #f7f7f5; }
+#tab-replies .outreach-reply-account-count { display: inline-grid; flex: none; min-width: 25px; height: 25px; padding: 0 6px; place-items: center; border-radius: 100px; color: #fff; background: #0a66c2; font-size: 11px; font-weight: 700; }
 #tab-replies .outreach-error { margin-bottom: 12px; }
 #tab-replies .state { min-height: 220px; display: grid; place-items: center; border: 1px dashed #e8e8e5; border-radius: 12px; color: #858580; background: #fff; }
 #tab-replies .state[hidden], #tab-replies .reply-inbox[hidden] { display: none !important; }
@@ -71,14 +80,15 @@
 .reply-inbox-inline-error[hidden] { display: none; }
 
 /* The numeric status badges stay fully pill-shaped, including single digits. */
-.sidebar-navigation .tab-count, #tab-replies .outreach-reply-account-tab span { border-radius: 100px !important; }
+.sidebar-navigation .tab-count, #tab-replies .outreach-reply-account-count { border-radius: 100px !important; }
 
 @media (max-width: 900px) {
   #tab-replies .outreach-replies-panel { padding: 18px 16px !important; }
-  #tab-replies .outreach-reply-account-tab { width: 138px; }
   .reply-inbox { grid-template-columns: minmax(190px, 36%) minmax(0, 1fr); }
 }
 @media (max-width: 600px) {
+  #tab-replies .outreach-reply-toolbar { flex-wrap: wrap; gap: 12px; }
+  #tab-replies .outreach-reply-check-actions { margin-left: auto; }
   #appMainScroll:has(#tab-replies:not([hidden])) { display: block; }
   #tab-replies:not([hidden]) { display: block; }
   #tab-replies .outreach-replies-panel { min-height: calc(100dvh - 72px); }

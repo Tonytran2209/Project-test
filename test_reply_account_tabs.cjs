@@ -10,26 +10,33 @@ const end = boundary.exec(source).index;
 const names = ['Minh Anh', 'Trang Liu', 'Minh Ánh', 'Linh Giang', 'Huyền Linh', 'Frank Nguyen', 'Phoebe'];
 const accounts = names.map((display_name, index) => ({account_id: `outreach_account_0${index + 1}`, display_name}));
 
-function tabsFor(configured, replies) {
-  const buttons = [];
+function optionsFor(configured, replies, selected = null) {
+  const select = {options: [], value: '', replaceChildren(...options) {this.options = options;}};
   const context = {
-    state: {outreachReplies: replies, outreachReplyAccounts: configured},
-    els: {outreachReplyAccountTabs: {replaceChildren() {buttons.length = 0;}, appendChild(button) {buttons.push(button);}}},
-    document: {createElement() {return {classList: {toggle() {}}, setAttribute() {}, addEventListener() {}};}},
+    state: {outreachReplies: replies, outreachReplyAccounts: configured, outreachReplySelectedAccountId: selected},
+    els: {outreachReplyAccountSelect: select},
+    Option: function(textContent, value) {Object.assign(this, {textContent, value, dataset: {}});},
+    replyAccountDropdown: {},
+    renderConnectDropdown() {},
     escapeHtml: String,
     getOutreachAccountDisplayName: id => accounts.find(account => account.account_id === id)?.display_name || id,
   };
   vm.runInNewContext(source.slice(start, end) + '\nrenderOutreachReplyInbox();', context);
-  return buttons;
+  return select;
 }
-test('reply inbox renders seven account tabs including Frank Nguyen and Phoebe', () => {
-  const buttons = tabsFor(accounts, []);
-  assert.equal(buttons.length, 7);
-  assert.match(buttons[5].innerHTML, /Frank Nguyen/);
-  assert.match(buttons[6].innerHTML, /Phoebe/);
+test('reply dropdown includes all seven account names and reply counts', () => {
+  const select = optionsFor(accounts.map((account, index) => ({...account, reply_count: index})), []);
+  assert.equal(select.options.length, 7);
+  assert.equal(select.options[5].textContent, 'Frank Nguyen');
+  assert.equal(select.options[6].textContent, 'Phoebe');
+  assert.equal(select.options[6].dataset.count, '6');
 });
 test('reply rows beyond the old five-account limit remain visible', () => {
-  const buttons = tabsFor(accounts.slice(0, 5), accounts.slice(5).map(account => ({assigned_account_id: account.account_id})));
-  assert.equal(buttons.length, 7);
-  assert.match(buttons[6].innerHTML, /Phoebe/);
+  const select = optionsFor(accounts.slice(0, 5), accounts.slice(5).map(account => ({assigned_account_id: account.account_id})));
+  assert.equal(select.options.length, 7);
+  assert.equal(select.options[6].textContent, 'Phoebe');
+  assert.equal(select.options[6].dataset.count, '1');
+});
+test('refreshing replies preserves the selected seventh account', () => {
+  assert.equal(optionsFor(accounts, [], 'outreach_account_07').value, 'outreach_account_07');
 });
