@@ -1308,357 +1308,6 @@ tbody tr:last-child td {
 
 
 /* =========================================================
-   WORKER CONTROLS
-   ========================================================= */
-
-.control-button {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: 13px;
-  background: var(--panel);
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.control-button:hover {
-  transform: translateY(-1px);
-}
-
-.control-button:disabled {
-  cursor: wait;
-  opacity: 0.55;
-  transform: none;
-}
-
-.control-button-danger {
-  border-color: rgba(255, 107, 122, 0.34);
-  background: var(--red-soft);
-  color: #ff9ba6;
-}
-
-.control-button-danger:hover {
-  background: rgba(255, 107, 122, 0.18);
-}
-
-.control-button-warning {
-  border-color: rgba(244, 183, 64, 0.34);
-  background: var(--amber-soft);
-  color: #f8ca72;
-}
-
-.control-button-warning:hover {
-  background: rgba(244, 183, 64, 0.18);
-}
-
-.control-button.is-resume {
-  border-color: rgba(35, 196, 131, 0.34);
-  background: var(--green-soft);
-  color: #79e4b7;
-}
-
-@media (max-width: 900px) {
-  .header-actions {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-}
-
-
-/* =========================================================
-   YOUTUBE RESEARCH
-   ========================================================= */
-
-.youtube-research-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.youtube-research-form,
-.youtube-progress-content {
-  padding: 20px;
-}
-
-.youtube-keyword-field {
-  display: grid;
-  gap: 9px;
-}
-
-.youtube-keyword-field > span {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.youtube-keyword-field input {
-  width: 100%;
-  min-height: 48px;
-  padding: 0 15px;
-  border: 1px solid var(--border-strong);
-  border-radius: 13px;
-  outline: none;
-  background: var(--bg-soft);
-  color: var(--text);
-}
-
-.youtube-keyword-field input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.youtube-form-actions,
-.youtube-progress-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.youtube-form-actions {
-  margin-top: 14px;
-}
-
-.youtube-limit-note {
-  color: var(--faint);
-  font-size: 11px;
-}
-
-.youtube-limit-note strong {
-  color: var(--text);
-}
-
-.youtube-progress-track {
-  height: 9px;
-}
-
-.youtube-progress-meta {
-  margin-top: 14px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.youtube-progress-meta strong {
-  color: var(--text);
-}
-
-.youtube-last-error {
-  margin: 15px 0 0;
-  padding: 11px 12px;
-  border: 1px solid rgba(255, 107, 122, 0.28);
-  border-radius: 10px;
-  background: var(--red-soft);
-  color: #ffabb4;
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.youtube-results-table {
-  min-width: 1280px;
-}
-
-.youtube-channel-cell {
-  display: grid;
-  min-width: 220px;
-  gap: 5px;
-}
-
-.youtube-channel-cell strong {
-  font-size: 12px;
-}
-
-.youtube-channel-cell a {
-  overflow: hidden;
-  max-width: 260px;
-  color: var(--blue);
-  font-size: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.youtube-link-list {
-  display: flex;
-  max-width: 260px;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.youtube-link-chip {
-  display: inline-flex;
-  max-width: 120px;
-  min-height: 24px;
-  align-items: center;
-  overflow: hidden;
-  padding: 0 8px;
-  border: 1px solid rgba(77, 158, 255, 0.25);
-  border-radius: 999px;
-  background: var(--blue-soft);
-  color: #8ec3ff;
-  font-size: 9px;
-  font-weight: 700;
-  text-decoration: none;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.youtube-link-chip:hover {
-  border-color: rgba(77, 158, 255, 0.48);
-}
-
-.table-muted {
-  color: var(--faint);
-}
-
-@media (max-width: 980px) {
-  .youtube-research-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 620px) {
-  .youtube-form-actions,
-  .youtube-progress-meta {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .youtube-start-button {
-    width: 100%;
-  }
-}
-
-
-/* YouTube layout hardening */
-#tab-youtube .youtube-research-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
-  align-items: stretch;
-  gap: 16px;
-}
-
-#tab-youtube .youtube-launch-panel,
-#tab-youtube .youtube-progress-panel {
-  min-width: 0;
-}
-
-#tab-youtube .youtube-research-form {
-  display: block;
-  padding: 20px;
-}
-
-#tab-youtube .youtube-keyword-field {
-  display: grid;
-  width: 100%;
-  gap: 9px;
-}
-
-#tab-youtube .youtube-keyword-field input {
-  display: block;
-  width: 100%;
-  min-height: 48px;
-}
-
-#tab-youtube .youtube-form-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 14px;
-}
-
-#tab-youtube #youtubeStartButton {
-  flex: 0 0 auto;
-}
-
-#tab-youtube .youtube-progress-content {
-  display: block;
-  padding: 20px;
-}
-
-#tab-youtube .youtube-progress-track {
-  width: 100%;
-}
-
-#tab-youtube .youtube-results-panel {
-  margin-top: 0;
-}
-
-@media (max-width: 980px) {
-  #tab-youtube .youtube-research-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 620px) {
-  #tab-youtube .youtube-form-actions,
-  #tab-youtube .youtube-progress-meta {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  #tab-youtube #youtubeStartButton {
-    width: 100%;
-  }
-}
-
-
-/* YouTube complete-history filters */
-.youtube-filter-toolbar {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  max-width: 100%;
-}
-
-.youtube-filter-toolbar select {
-  min-height: 42px;
-  max-width: 190px;
-}
-
-.youtube-search-field {
-  min-width: 300px;
-}
-
-.youtube-keyword-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 26px;
-  max-width: 180px;
-  padding: 0 9px;
-  overflow: hidden;
-  border: 1px solid rgba(124, 109, 242, 0.28);
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: #c9c3ff;
-  font-size: 10px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-#tab-youtube .youtube-results-table {
-  min-width: 1320px;
-}
-
-@media (max-width: 900px) {
-  .youtube-filter-toolbar {
-    width: 100%;
-    justify-content: stretch;
-  }
-
-  .youtube-filter-toolbar select,
-  .youtube-search-field {
-    width: 100%;
-    max-width: none;
-  }
-}
-
-/* =========================================================
    OUTREACH
    ========================================================= */
 
@@ -5236,7 +4885,6 @@ input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea,
 .search-field,
-.youtube-keyword-field input,
 .outreach-url-field textarea,
 .acceptance-insights-filter-field select,
 .outreach-account-filter select {
@@ -5255,7 +4903,6 @@ textarea:hover,
 input:not([type="checkbox"]):not([type="radio"]):focus,
 select:focus,
 textarea:focus,
-.youtube-keyword-field input:focus,
 .outreach-url-field textarea:focus,
 .acceptance-insights-filter-field select:focus,
 .outreach-account-filter select:focus {
@@ -5274,8 +4921,6 @@ textarea:focus,
   background: transparent !important;
   box-shadow: none !important;
 }
-
-.youtube-keyword-field > span,
 .outreach-url-field > span,
 .acceptance-insights-filter-field > span,
 .outreach-account-filter > span,
@@ -5349,7 +4994,6 @@ tbody tr:hover {
 .status-badge,
 .post-count-badge,
 .outreach-current-status,
-.youtube-keyword-chip,
 .outreach-message-status-badge {
   border-radius: 999px;
   font-weight: 800;
@@ -5403,7 +5047,6 @@ tbody tr:hover {
 /* ---------- Progress ---------- */
 
 .process-progress,
-.youtube-progress-track,
 .outreach-progress-track,
 .rate-limit-progress-track {
   overflow: hidden;
@@ -5418,7 +5061,6 @@ tbody tr:hover {
 }
 
 .process-progress-bar,
-.youtube-progress-bar,
 .outreach-progress-bar,
 .rate-limit-progress-bar {
   height: 100%;
@@ -5532,7 +5174,6 @@ tbody tr:hover {
 }
 
 .outreach-delete-warning,
-.youtube-last-error,
 .global-error {
   border-color: rgba(255, 107, 122, 0.28);
   background: var(--red-soft);
@@ -5664,27 +5305,15 @@ tbody tr:hover {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-
-/* ---------- Links ---------- */
-
-.youtube-channel-cell a,
 .outreach-accepted-pool-table a,
 a.outreach-profile-link {
   color: var(--info-text);
   text-decoration: none;
 }
-
-.youtube-channel-cell a:hover,
 .outreach-accepted-pool-table a:hover,
 a.outreach-profile-link:hover {
   color: #b6d8ff;
   text-decoration: underline;
-}
-
-.youtube-link-chip {
-  border-color: rgba(77, 158, 255, 0.25);
-  background: var(--blue-soft);
-  color: var(--info-text);
 }
 
 /* ---------- Empty / loading states ---------- */

@@ -1,22 +1,9 @@
-# LinkedIn Dashboard v3
+# Outreach Operations frontend
 
-Bản dashboard tối giản, tập trung vào dữ liệu đã scan.
+Dashboard cho Connect, Acceptance, Recipients, Messages, Replies và báo cáo Campaigns.
 
-## Thay file
+Backend phục vụ thư mục này tại `/dashboard/`. Cấu hình Supabase của trình duyệt nằm trong `config.js` (tham khảo `config.example.js`); không đặt service-role key trong frontend.
 
-Copy đè 3 file sau vào thư mục `frontend/`:
+Các stylesheet theo workspace được nạp từ `index.html`. Giữ giao diện dropdown tùy chỉnh đồng bộ với Connect; không dùng dropdown native hiển thị trực tiếp.
 
-- `index.html`
-- `styles.css`
-- `app.js`
-
-Giữ nguyên `config.js` hiện tại.
-
-## Fix chính
-
-- bỏ sidebar
-- bỏ trạng thái Loading scanned profiles
-- thêm `[hidden] { display: none !important; }`
-- metric cards rõ hơn
-- table full width
-- drawer chi tiết giữ nguyên
+Worker chạy riêng trên máy có browser profile LinkedIn. Hai script dịch vụ Replies vẫn nằm tại `git-meta/reply_check_schedule_service.sh` và `git-meta/reply_send_workers_service.sh`.

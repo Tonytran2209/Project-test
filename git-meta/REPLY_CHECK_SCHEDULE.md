@@ -1,6 +1,6 @@
 # Scheduled LinkedIn reply checks (Mac worker)
 
-The reply-check worker scans the five Outreach accounts sequentially at
+The reply-check worker scans the configured Outreach accounts (seven by default) sequentially at
 **12:00 and 18:00 Asia/Ho_Chi_Minh** every day. It records every Unread
 conversation and restores LinkedIn's unread state; it does not send messages.
 The Replies inbox reads those saved conversations and checks for new scan data
@@ -18,7 +18,7 @@ On the worker Mac, after pulling this repo:
 First apply `outreach_reply_pruning.sql` and `outreach_reply_all_unread.sql`
 once in the Supabase SQL Editor, before pulling the new worker. The second
 migration allows Unread threads with no sent target to be stored. The
-database function removes replies absent from a successful five-account Unread
+database function removes replies absent from a successful all-account Unread
 scan, while preserving replies linked to any Send via worker job. Those
 preserved older replies are hidden from the live Replies inbox but remain in
 the database with their jobs. The foreign key is changed from CASCADE to
@@ -45,7 +45,7 @@ the scheduled service, run:
 zsh git-meta/reply_check_schedule_service.sh uninstall
 ```
 
-For a one-off scan of all five accounts:
+For a one-off scan of all configured accounts:
 
 ```bash
 .venv/bin/python3 -u outreach_reply_check_worker.py --all-accounts

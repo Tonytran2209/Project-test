@@ -10,7 +10,7 @@ config.js
 .env
 .venv/
 
-grep -qxF 'linkedin_browser_profiles/' \
-  .gitignore 2>/dev/null \
-  || echo 'linkedin_browser_profiles/' \
-  >> .gitignore
+linkedin_browser_profiles/
+outreach_browser_profiles/
+logs/
+.DS_Store
