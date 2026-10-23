@@ -98,7 +98,7 @@ def save_outreach_reply(
     cleaned_message_time = _safe_text(linkedin_message_time)
 
     cleaned_account = _safe_text(assigned_account_id)
-    if cleaned_account not in DEFAULT_OUTREACH_ACCOUNT_IDS[:5]:
+    if cleaned_account not in DEFAULT_OUTREACH_ACCOUNT_IDS:
         raise OutreachReplyStoreError("A valid assigned_account_id is required.")
     if not cleaned_name:
         raise OutreachReplyStoreError("user_name is required.")
@@ -333,7 +333,7 @@ def list_outreach_reply_page(
 ) -> dict:
     """Fetch a stable page of raw reply rows for one account."""
     cleaned_account_id = _safe_text(account_id)
-    if cleaned_account_id not in DEFAULT_OUTREACH_ACCOUNT_IDS[:5]:
+    if cleaned_account_id not in DEFAULT_OUTREACH_ACCOUNT_IDS:
         raise OutreachReplyStoreError("Unknown Outreach account.")
     safe_offset = max(0, int(offset))
     safe_limit = max(1, min(int(limit), 50))
@@ -417,7 +417,7 @@ def list_outreach_reply_accounts(
     include_counts: bool = False,
     active_since: str | None = None,
 ) -> list[dict]:
-    """Return up to five Outreach accounts with their display names."""
+    """Return registered Outreach accounts with their display names."""
 
     accounts = [
         {
@@ -427,7 +427,7 @@ def list_outreach_reply_accounts(
                 account_id,
             ),
         }
-        for account_id in DEFAULT_OUTREACH_ACCOUNT_IDS[:5]
+        for account_id in DEFAULT_OUTREACH_ACCOUNT_IDS
     ]
     if include_counts:
         active_client = client or get_outreach_client()

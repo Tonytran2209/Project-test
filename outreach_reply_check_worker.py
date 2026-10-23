@@ -1761,7 +1761,7 @@ def run_once(account_id: str) -> None:
 
 
 def run_all_accounts() -> list[str]:
-    """Scan all five profiles sequentially, continuing after account errors."""
+    """Scan all registered profiles sequentially, continuing after account errors."""
 
     failed_accounts: list[str] = []
     for account_id in DEFAULT_OUTREACH_ACCOUNT_IDS:
@@ -1778,7 +1778,7 @@ def run_all_accounts() -> list[str]:
             ", ".join(failed_accounts),
         )
     else:
-        logger.info("Reply check finished for all five accounts")
+        logger.info("Reply check finished for all %s accounts", len(DEFAULT_OUTREACH_ACCOUNT_IDS))
     return failed_accounts
 
 
@@ -1845,14 +1845,14 @@ def _parse_args() -> argparse.Namespace:
         "--schedule",
         action="store_true",
         help=(
-            "Continuously scan all five accounts at 12:00 and 18:00 "
+            "Continuously scan all registered accounts at 12:00 and 18:00 "
             "Asia/Ho_Chi_Minh time."
         ),
     )
     mode.add_argument(
         "--all-accounts",
         action="store_true",
-        help="Scan all five accounts once, sequentially.",
+        help="Scan all registered accounts once, sequentially.",
     )
     mode.add_argument(
         "--account-id",

@@ -1756,7 +1756,9 @@ const OUTREACH_ACCOUNT_DISPLAY_NAMES = {
   outreach_account_02: "Trang Liu",
   outreach_account_03: "Minh Ánh",
   outreach_account_04: "Linh Giang",
-  outreach_account_05: "Huyền Linh"
+  outreach_account_05: "Huyền Linh",
+  outreach_account_06: "Frank Nguyen",
+  outreach_account_07: "Phoebe"
 };
 
 function getOutreachAccountDisplayName(accountId) {
@@ -2943,7 +2945,7 @@ function renderOutreachAccounts(
   );
 
   if (els.outreachTotalRemaining) {
-    const totalCapacity = 500;
+    const totalCapacity = rows.reduce((sum, account) => sum + Number(account.weekly_limit || 100), 0);
     const totalUsed = rows.reduce(
       (sum, account) => sum + Math.max(
         0,
@@ -8797,7 +8799,7 @@ function closeDrawer() {
 function renderOutreachReplyInbox() {
   const replies = Array.isArray(state.outreachReplies) ? state.outreachReplies : [];
   const configured = Array.isArray(state.outreachReplyAccounts)
-    ? state.outreachReplyAccounts.slice(0, 5) : [];
+    ? state.outreachReplyAccounts : [];
   const replyCounts = new Map(configured.map((account) => [
     String(account.account_id || "").trim(), Number(account.reply_count || 0)
   ]));
@@ -8807,7 +8809,7 @@ function renderOutreachReplyInbox() {
   ]));
   replies.forEach((reply) => {
     const id = String(reply.assigned_account_id || "").trim();
-    if (id && !accountMap.has(id) && accountMap.size < 5) accountMap.set(id, id);
+    if (id && !accountMap.has(id)) accountMap.set(id, getOutreachAccountDisplayName(id));
   });
   const accounts = Array.from(accountMap, ([id, name]) => ({ id, name }));
   if (!accountMap.has(state.outreachReplySelectedAccountId)) {
@@ -9129,7 +9131,7 @@ async function loadOutreachReplies() {
     state.outreachReplies = [];
     state.outreachReplyRevision = result.revision ?? null;
     state.outreachReplyAccounts = Array.isArray(result.accounts)
-      ? result.accounts.slice(0, 5)
+      ? result.accounts
       : [];
     state.outreachReplyNextOffsetByAccount = {};
     state.outreachReplyHasMoreByAccount = {};
@@ -9192,7 +9194,7 @@ async function refreshOutreachRepliesAfterScan() {
     const metadataResponse = await fetch("/api/outreach/replies?metadata=1", { cache: "no-store" });
     const metadata = await metadataResponse.json();
     if (!metadataResponse.ok || !metadata.ok) throw new Error(metadata.error || "Could not refresh replies.");
-    const accounts = Array.isArray(metadata.accounts) ? metadata.accounts.slice(0, 5) : [];
+    const accounts = Array.isArray(metadata.accounts) ? metadata.accounts : [];
     const nextCount = Number(accounts.find((account) => account.account_id === accountId)?.reply_count || 0);
     const targetCount = Math.max(OUTREACH_REPLY_BATCH_SIZE,
       previouslyLoaded + Math.max(0, nextCount - previousCount));

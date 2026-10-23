@@ -17,6 +17,8 @@ DEFAULT_OUTREACH_ACCOUNT_IDS = (
     "outreach_account_03",
     "outreach_account_04",
     "outreach_account_05",
+    "outreach_account_06",
+    "outreach_account_07",
 )
 
 
@@ -36,6 +38,8 @@ OUTREACH_ACCOUNT_DISPLAY_NAMES = {
     "outreach_account_03": "Minh Ánh",
     "outreach_account_04": "Linh Giang",
     "outreach_account_05": "Huyền Linh",
+    "outreach_account_06": "Frank Nguyen",
+    "outreach_account_07": "Phoebe",
 }
 
 DEFAULT_OUTREACH_PROFILE_ROOT = (
@@ -92,7 +96,7 @@ def _read_outreach_account_ids(
         outreach_account_01,outreach_account_02
 
     Nếu không cấu hình,
-    mặc định dùng đủ 5 account.
+    mặc định dùng toàn bộ account đã đăng ký.
     """
 
     raw_value = os.getenv(
@@ -201,7 +205,7 @@ class OutreachAccountPoolSettings:
         Folder chứa browser profile.
 
     account_ids:
-        Danh sách 5 account Outreach.
+        Danh sách account Outreach.
 
     profiles_per_account_turn:
         Số profile tối đa một account
@@ -256,7 +260,7 @@ class OutreachAccountPoolSettings:
 
 class OutreachAccountPool:
     """
-    Quản lý 5 browser sessions
+    Quản lý các browser sessions
     dành riêng cho Outreach.
 
     Pool này dùng chung cho:

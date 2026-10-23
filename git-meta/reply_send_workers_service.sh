@@ -14,6 +14,8 @@ ACCOUNT_IDS=(
   outreach_account_03
   outreach_account_04
   outreach_account_05
+  outreach_account_06
+  outreach_account_07
 )
 
 label_for() {
@@ -116,7 +118,7 @@ install_services() {
     echo "Started: $account_id"
   done
 
-  echo "Reply-send workers installed for all five Outreach accounts."
+  echo "Reply-send workers installed for all ${#ACCOUNT_IDS[@]} Outreach accounts."
   echo "Logs: $LOG_DIR/reply-send-outreach_account_*.out.log"
 }
 

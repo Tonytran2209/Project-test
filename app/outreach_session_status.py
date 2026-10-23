@@ -119,7 +119,7 @@ def ensure_session_rows(
     client: Client | None = None,
 ) -> list[dict[str, Any]]:
     """
-    Ensure the five Outreach account rows exist.
+    Ensure the registered Outreach account rows exist.
 
     This function is kept for compatibility, but it now performs at most:
       1 SELECT
@@ -396,7 +396,7 @@ def queue_outreach_session_checks(
         )
     }
 
-    # The normal "Check all accounts" path gets all five rows back from the
+    # The normal "Check all accounts" path gets all configured rows back from the
     # single UPSERT, so no follow-up GET is necessary.
     if set(cleaned_ids) == allowed_ids and len(returned_rows) == len(accounts):
         return [

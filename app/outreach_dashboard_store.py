@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from supabase import Client, create_client
 
 from app.outreach_campaign_identity import campaign_id_for_name, connect_batch_label, connect_batch_name
+from app.outreach_account_pool import DEFAULT_OUTREACH_ACCOUNT_IDS
 from app.settings import (
     Settings,
     load_settings,
@@ -1109,10 +1110,12 @@ def get_raw_accounts(
         .execute()
     )
 
-    return list(
-        response.data
-        or []
-    )
+    rows = list(response.data or [])
+    registered = {row.get("account_id") for row in rows}
+    # New accounts must be visible before their first worker/database activity.
+    rows.extend({"account_id": account_id, "status": "unknown", "profile_directory": ""}
+                for account_id in DEFAULT_OUTREACH_ACCOUNT_IDS if account_id not in registered)
+    return sorted(rows, key=lambda row: str(row.get("account_id") or ""))
 
 
 # =========================================================
