@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import argparse
+from datetime import datetime, timezone
+from pathlib import Path
 import signal
 import sys
 import time
@@ -21,6 +24,8 @@ from app.outreach_acceptance_store import (
 from app.outreach_account_pool import (
     OutreachAccountPool,
 )
+from app.outreach_acceptance_schedule import AcceptanceSchedule
+from app.outreach_acceptance_recheck import scan_connect_week
 
 
 # =========================================================
@@ -94,6 +99,7 @@ class OutreachAcceptanceWorker:
 
     def __init__(
         self,
+        *, schedule_path: Path | None = None,
     ) -> None:
         self.client = (
             get_outreach_supabase_client()
@@ -104,6 +110,9 @@ class OutreachAcceptanceWorker:
         )
 
         self._stop_requested = False
+        self.schedule = AcceptanceSchedule(
+            schedule_path, lambda week, checkpoint: scan_connect_week(self, week, checkpoint)
+        ) if schedule_path is not None else None
 
     # =====================================================
     # RUN FOREVER
@@ -135,6 +144,14 @@ class OutreachAcceptanceWorker:
 
         try:
             while not self._stop_requested:
+                if self.schedule is not None:
+                    try:
+                        if self.schedule.tick(datetime.now(timezone.utc)):
+                            continue
+                    except Exception as exc:
+                        print(f"Acceptance schedule error (progress preserved): {exc}", file=sys.stderr)
+                        self._sleep_interruptibly(IDLE_POLL_SECONDS)
+                        continue
                 check_run = (
                     self._claim_next_check_safely()
                 )
@@ -145,9 +162,12 @@ class OutreachAcceptanceWorker:
                     )
                     continue
 
-                self._process_check_run(
-                    check_run
-                )
+                started = datetime.now(timezone.utc)
+                try:
+                    self._process_check_run(check_run)
+                finally:
+                    if self.schedule is not None:
+                        self.schedule.defer_busy_slots(started, datetime.now(timezone.utc))
 
             return 0
 
@@ -715,14 +735,25 @@ class OutreachAcceptanceWorker:
 # =========================================================
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Manual and scheduled Acceptance checks")
+    parser.add_argument("--schedule", action="store_true", help="Enable 00:00 / backlog 06:00 Vietnam rotation")
+    parser.add_argument("--schedule-state", type=Path,
+                        default=Path(__file__).resolve().parent / "output" / "acceptance-schedule.json")
+    args = parser.parse_args()
     try:
-        worker = (
-            OutreachAcceptanceWorker()
-        )
-
-        return (
-            worker.run_forever()
-        )
+        # Manual and scheduled modes share one process lock on this worker Mac.
+        import fcntl
+        lock_path = Path(__file__).resolve().parent / "output" / "acceptance-worker.lock"
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with lock_path.open("a+") as lock:
+            try:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise RuntimeError("Another Acceptance worker is running. Stop it before starting this one.")
+            worker = OutreachAcceptanceWorker(schedule_path=args.schedule_state if args.schedule else None)
+            if args.schedule:
+                print(f"Acceptance schedule: 00:00 daily; old-cycle backlog 06:00 | state={args.schedule_state}", flush=True)
+            return worker.run_forever()
 
     except Exception as exc:
         print(

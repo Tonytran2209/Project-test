@@ -68,6 +68,7 @@ rg -n -B 1 -A 1 '@feature replies' app frontend
 | API | `backend/main.py` |
 | Connect | `app/outreach_job_store.py`, `app/outreach_scheduler.py`, `outreach_connect_worker.py` |
 | Acceptance | `app/outreach_acceptance_store.py`, `app/linkedin_acceptance_checker.py`, `outreach_acceptance_worker.py` |
+| Lịch recheck Acceptance | `app/outreach_acceptance_schedule.py`, `app/outreach_acceptance_recheck.py`, `git-meta/acceptance_schedule_service.sh` |
 | Recipients | `app/outreach_accepted_pool_store.py`, `app/outreach_message_preparation_store.py` |
 | Message template và queue | `app/linkedin_message_template.py`, `app/outreach_message_company.py`, `app/outreach_message_queue_store.py` |
 | Gửi tin nhắn | `app/outreach_message_batch_executor.py`, `app/outreach_message_executor.py`, `outreach_message_worker.py` |
@@ -78,7 +79,7 @@ rg -n -B 1 -A 1 '@feature replies' app frontend
 | Campaign performance | `app/outreach_campaign_performance_store.py` |
 | Dịch vụ Replies trên Mac | `git-meta/reply_check_schedule_service.sh`, `git-meta/reply_send_workers_service.sh` |
 
-`git-meta` chỉ giữ script và hướng dẫn dịch vụ Replies; không tạo lại bản sao `app`, `backend` hoặc `frontend` trong đó. Cập nhật bảng này nếu chuyển module hoặc đổi trách nhiệm của module.
+`git-meta` chỉ giữ script và hướng dẫn dịch vụ worker; không tạo lại bản sao `app`, `backend` hoặc `frontend` trong đó. Cập nhật bảng này nếu chuyển module hoặc đổi trách nhiệm của module.
 
 ## Giữ cấu trúc dễ tìm
 

@@ -6,4 +6,4 @@ Backend phục vụ thư mục này tại `/dashboard/`. Cấu hình Supabase c�
 
 Các stylesheet theo workspace được nạp từ `index.html`. Giữ giao diện dropdown tùy chỉnh đồng bộ với Connect; không dùng dropdown native hiển thị trực tiếp.
 
-Worker chạy riêng trên máy có browser profile LinkedIn. Hai script dịch vụ Replies vẫn nằm tại `git-meta/reply_check_schedule_service.sh` và `git-meta/reply_send_workers_service.sh`.
+Worker chạy riêng trên máy có browser profile LinkedIn. Script dịch vụ nằm tại `git-meta/reply_check_schedule_service.sh`, `git-meta/reply_send_workers_service.sh` và `git-meta/acceptance_schedule_service.sh`. Lịch Acceptance được mô tả trong `git-meta/ACCEPTANCE_RECHECK_SCHEDULE.md`.
