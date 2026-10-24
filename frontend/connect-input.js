@@ -7,6 +7,8 @@
     return rows;
   }
 
+  // @layer business
+  // @feature connect
   function parse(rawUrls, rawCompanies) {
     const companyNames = lines(rawCompanies);
     const hasCompanies = companyNames.length > 0;

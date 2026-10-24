@@ -53,6 +53,8 @@ def _message_fingerprint(
     return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
 
+# @layer database
+# @feature replies
 def prune_stale_outreach_replies(
     scan_started_at: str, *, client: Client | None = None,
 ) -> int:
@@ -73,6 +75,8 @@ def prune_stale_outreach_replies(
         raise OutreachReplyStoreError("Reply pruning did not return a count.") from exc
 
 
+# @layer database
+# @feature replies
 def save_outreach_reply(
     *,
     sent_target_id: str,

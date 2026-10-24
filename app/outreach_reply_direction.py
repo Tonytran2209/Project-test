@@ -87,6 +87,8 @@ def verify_sent_message_events(events: list[dict], sent_message_text: str) -> No
             event["is_incoming"] = False
 
 
+# @layer business
+# @feature replies
 def merge_conversation_snapshots(older: list[dict], newer: list[dict]) -> list[dict]:
     """Join overlapping DOM windows without collapsing repeated real messages."""
     def identity(event: dict) -> tuple[str, str, str]:
@@ -134,6 +136,8 @@ def same_person_name(left: str, right: str) -> bool:
     return bool(left_tokens and right_tokens and left_tokens == right_tokens)
 
 
+# @layer business
+# @feature replies
 def classify_message_direction(
     *,
     class_evidence: str,

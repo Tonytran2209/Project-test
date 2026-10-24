@@ -1013,6 +1013,8 @@ function parseOutreachInput() {
   return ConnectInput.parse(els.outreachUrlInput?.value, els.outreachCompanyInput?.value);
 }
 
+// @layer presentation
+// @feature connect
 function renderConnectMatchPreview() {
   const result = ConnectInput.preview(els.outreachUrlInput?.value, els.outreachCompanyInput?.value);
   els.outreachMatchRows.innerHTML = result.rows.map(row => `<tr><td>${escapeHtml(row.url)}</td><td>${escapeHtml(row.company)}</td></tr>`).join("");
@@ -6988,6 +6990,8 @@ async function createOutreachConnectJob(
   }
 }
 
+// @layer presentation
+// @feature replies
 function renderOutreachReplyInbox() {
   const replies = Array.isArray(state.outreachReplies) ? state.outreachReplies : [];
   const configured = Array.isArray(state.outreachReplyAccounts)

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 
+# @layer business
+# @feature connect
 def prepare_connect_entries(urls, company_names=None) -> list[tuple[str, str]]:
     raw_urls = [str(url or "").strip() for url in urls]
     if company_names is None:

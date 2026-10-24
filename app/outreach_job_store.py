@@ -65,6 +65,8 @@ def get_outreach_supabase_client() -> Client:
     )
 
 
+# @layer database
+# @feature connect
 def list_connect_campaigns(*, client: Client | None = None) -> list[str]:
     """Existing campaign names, backed by Connect jobs (no migration needed)."""
     active_client = client if client is not None else get_outreach_supabase_client()
