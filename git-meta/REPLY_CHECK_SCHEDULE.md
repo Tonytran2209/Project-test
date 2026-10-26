@@ -2,16 +2,23 @@
 
 The reply-check worker scans the configured Outreach accounts (seven by default) sequentially at
 **12:00 and 18:00 Asia/Ho_Chi_Minh** every day. It records every Unread
-conversation and restores LinkedIn's unread state; it does not send messages.
+conversation that matches a successfully sent target for the same account and
+restores LinkedIn's unread state; it does not send messages.
 The Replies inbox reads those saved conversations and checks for new scan data
 every 30 seconds while the tab is open, updating the selected chat when it changes.
-When a conversation matches a sent target, the worker retains campaign and
-batch context. Other Unread conversations remain visible without that context.
+The worker retains the original sent target, campaign and batch context.
+Other Unread conversations are skipped before opening or reading their history;
+they are not scan failures. A member URL on the list row is preferred; otherwise
+an exact normalized recipient-name match permits opening for identity verification.
+An opened member URL or unique sent-message evidence is still required to save.
+If the stored URL has no recognizable name and the row exposes no member URL,
+the entry is conservatively skipped instead of guessed from a fuzzy name match.
 It reads overlapping history windows from newest to oldest, classifies each
 message as own, incoming, or unknown, and never treats shared message text as
-sender proof. A thread with no verified profile URL is visible but cannot be
-sent to by the reply worker. If the Unread list or history cannot be read
-completely, the scan fails without pruning stored replies.
+sender proof. If the Unread list or an eligible conversation's history cannot be
+read completely, the scan fails without pruning stored replies. Historical
+unlinked threads are no longer refreshed and fall out of the live inbox after a
+successful full scan; the existing pruning rules still protect linked send jobs.
 
 On the worker Mac, after pulling this repo:
 

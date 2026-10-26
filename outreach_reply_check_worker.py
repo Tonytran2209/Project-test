@@ -1,10 +1,10 @@
-"""Synchronize every LinkedIn Messaging > Unread conversation.
+"""Synchronize Unread conversations matched to this account's sent targets.
 
 Flow:
     1. Open the selected Outreach LinkedIn profile.
     2. Open LinkedIn Messaging and select Unread.
-    3. Open every Unread conversation and read its full history.
-    4. Link to a sent target when identity can be verified; leave others unlinked.
+    3. Skip Unread entries outside this account's successfully sent list.
+    4. Verify eligible thread identity before saving its full history.
     5. Save messages with explicit own/incoming/unknown roles.
     6. Use the active-thread menu beside Star to restore Mark as unread.
 
@@ -49,6 +49,7 @@ from app.outreach_reply_direction import (
     incoming_after_last_own,
     merge_conversation_snapshots,
     profile_slug_key,
+    same_person_name,
     sent_target_from_own_messages,
     sent_target_from_unverified_message,
     verify_sent_message_events,
@@ -416,7 +417,12 @@ def _read_visible_unread_threads(surface: Page | Frame) -> list[dict]:
             name = _name_for_unread_row(row)
             if not name:
                 continue
-            threads.append({"name": name, "thread_url": _thread_url_for_row(row)})
+            member_keys = {
+                key for anchor in row.locator('a[href*="/in/"]').all()
+                if (key := profile_slug_key(anchor.get_attribute("href")))
+            }
+            member_url = f"https://www.linkedin.com/in/{next(iter(member_keys))}/" if len(member_keys) == 1 else ""
+            threads.append({"name": name, "thread_url": _thread_url_for_row(row), "linkedin_url": member_url})
     if threads:
         return threads
     return [
@@ -615,6 +621,26 @@ def _active_thread_profile_key(page: Page) -> str:
     return ""
 
 
+# @layer business
+# @feature replies
+def sent_candidates_for_unread_thread(thread: dict, sent_profiles: list[dict], account_id: str) -> list[dict]:
+    """Gate before opening: a member URL, or exact normalized name, must match.
+
+    A name only permits inspection; it is not sufficient proof for saving.
+    Unknown slugs/display-name differences are skipped rather than guessed.
+    """
+    profiles = [profile for profile in sent_profiles
+                if profile.get("status") == "sent"
+                and profile.get("assigned_account_id") == account_id]
+    key = profile_slug_key(thread.get("linkedin_url"))
+    if key:
+        return [profile for profile in profiles if profile_slug_key(profile.get("linkedin_url")) == key]
+    name = _normalize_name(thread.get("name") or "")
+    return [profile for profile in profiles
+            if same_person_name(name, profile.get("normalized_name") or
+                                _profile_name_from_linkedin_url(profile.get("linkedin_url")))]
+
+
 def match_unread_by_profile_url(
     page: Page,
     *,
@@ -622,7 +648,7 @@ def match_unread_by_profile_url(
     sent_profiles: list[dict],
     account_id: str,
 ) -> list[dict]:
-    """Resolve sent targets when possible; retain every other Unread thread."""
+    """Skip outsiders before reading history; save only verified sent targets."""
     matched_profiles: list[dict] = []
     sent_by_slug: dict[str, list[dict]] = {}
     for profile in sent_profiles:
@@ -632,6 +658,11 @@ def match_unread_by_profile_url(
 
     for unread_thread in unread_names:
         unread_name = unread_thread["name"]
+        eligible = sent_candidates_for_unread_thread(unread_thread, sent_profiles, account_id)
+        if not eligible:
+            logger.info("UNREAD SKIPPED | account=%s | name=%s | reason=not_in_sent_list",
+                        account_id, unread_name)
+            continue
         normalized_name = _normalize_name(unread_name)
         opened = False
         try:
@@ -644,37 +675,47 @@ def match_unread_by_profile_url(
                 f"https://www.linkedin.com/in/{profile_key}/" if profile_key else ""
             )
             candidates = sent_by_slug.get(profile_key, []) if profile_key else []
+            candidates = [profile for profile in candidates
+                          if profile.get("status") == "sent"
+                          and profile.get("assigned_account_id") == account_id]
+            if profile_key and not candidates:
+                logger.info("UNREAD SKIPPED | account=%s | name=%s | reason=profile_not_in_sent_list",
+                            account_id, unread_name)
+                continue
             match_reason = "exact_thread_profile_url"
             conversation_events = load_full_conversation(
                 page, unread_name, account_id=account_id,
                 sent_message_text=str(candidates[0].get("message_text") or "")
                 if candidates else "",
             )
-            if not candidates and sent_profiles:
+            if not candidates:
                 own_text_match = sent_target_from_own_messages(
-                    conversation_events, sent_profiles,
+                    conversation_events, eligible,
                 )
                 if own_text_match:
                     candidates = [own_text_match]
                     match_reason = "exact_own_sent_message"
                 else:
                     unverified_text_match = sent_target_from_unverified_message(
-                        conversation_events, sent_profiles, unread_name,
+                        conversation_events, eligible, unread_name,
                     )
                     if unverified_text_match:
                         candidates = [unverified_text_match]
                         match_reason = "unique_recipient_and_exact_sent_message"
-            if candidates:
-                verify_sent_message_events(
-                    conversation_events, str(candidates[0].get("message_text") or ""),
-                )
+            if not candidates:
+                logger.info("UNREAD SKIPPED | account=%s | name=%s | reason=sent_identity_unverified",
+                            account_id, unread_name)
+                continue
+            verify_sent_message_events(
+                conversation_events, str(candidates[0].get("message_text") or ""),
+            )
             matched_profiles.append({
                 "unread_name": unread_name,
                 "thread_url": thread_url,
                 "normalized_unread_name": normalized_name,
-                "match_reason": match_reason if candidates else "unlinked_unread_thread",
-                "similarity": 1.0 if candidates else 0.0,
-                "sent_profile": candidates[0] if candidates else {},
+                "match_reason": match_reason,
+                "similarity": 1.0,
+                "sent_profile": candidates[0],
                 "linkedin_url": profile_url or thread_url,
                 "conversation_events": conversation_events,
             })
@@ -684,13 +725,6 @@ def match_unread_by_profile_url(
                     match_reason,
                     unread_name,
                     candidates[0].get("id"),
-                )
-            else:
-                logger.warning(
-                    "UNLINKED UNREAD THREAD | unread_name=%s | profile_link_found=%s | thread_url_found=%s",
-                    unread_name,
-                    bool(profile_key),
-                    bool(thread_url),
                 )
         finally:
             if opened:
@@ -1691,7 +1725,7 @@ def open_unread(page: Page) -> None:
 
 
 def _run_once(account_id: str) -> None:
-    """Read every Unread thread, then restore unread state."""
+    """Read only sent-list Unread threads, then restore their unread state."""
 
     pool = OutreachAccountPool()
     account = pool.get_account(account_id)
@@ -1714,8 +1748,7 @@ def _run_once(account_id: str) -> None:
             client=client,
         )
         unread_names = scan_unread_names(page)
-        # A display name alone is not proof of identity. Open every thread and
-        # link it only through its member URL or a unique own sent message.
+        # Outside-sent-list threads are intentional skips, not scan failures.
         matched_profiles = match_unread_by_profile_url(
             page,
             unread_names=unread_names,
@@ -1723,7 +1756,7 @@ def _run_once(account_id: str) -> None:
             account_id=account.account_id,
         )
         logger.info(
-            "Reply-check match coverage | account=%s | unread=%s | verified=%s | unmatched=%s",
+            "Reply-check match coverage | account=%s | unread=%s | verified=%s | skipped=%s",
             account.account_id,
             len(unread_names),
             len(matched_profiles),
@@ -1734,12 +1767,6 @@ def _run_once(account_id: str) -> None:
             account_id=account.account_id,
             client=client,
         )
-        unread_not_scanned = len(unread_names) - len(matched_profiles)
-        if unread_not_scanned:
-            raise RuntimeError(
-                f"{unread_not_scanned} Unread conversation(s) could not be scanned; "
-                "keeping the previous Replies snapshot."
-            )
 
         print("")
         print("Reply-check scan completed.")
