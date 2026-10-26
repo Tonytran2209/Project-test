@@ -1702,6 +1702,19 @@ function syncAcceptanceInsightsFilters() {
 }
 
 
+function getAcceptanceInsightAccountRows(insights) {
+  if (!insights) return [];
+  const rows = Array.isArray(insights.accounts) ? insights.accounts.map(row => ({...row})) : [];
+  const present = new Set(rows.map(row => row.account_id));
+  for (const accountId of Object.keys(OUTREACH_ACCOUNT_DISPLAY_NAMES)) {
+    if (!present.has(accountId)) {
+      rows.push({account_id: accountId, connected: 0, accepted: 0,
+        acceptance_rate: 0, share_of_total_accepted: 0});
+    }
+  }
+  return rows;
+}
+
 function renderAcceptanceInsights() {
   populateAcceptanceInsightsJobFilter();
   populateAcceptanceInsightsWeekFilter();
@@ -1716,12 +1729,7 @@ function renderAcceptanceInsights() {
   const error =
     state.acceptanceInsightsError;
 
-  const accounts =
-    Array.isArray(
-      insights?.accounts
-    )
-      ? insights.accounts
-      : [];
+  const accounts = getAcceptanceInsightAccountRows(insights);
 
   const summary =
     insights?.summary ||
