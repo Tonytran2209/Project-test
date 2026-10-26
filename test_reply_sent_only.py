@@ -125,6 +125,13 @@ class SentOnlyReplyTests(unittest.TestCase):
 
 
 class CanonicalUrlTests(unittest.TestCase):
+    def test_unresolved_internal_id_never_becomes_outside_list(self):
+        profiles=[{'id':'t','status':'sent','assigned_account_id':'a','linkedin_url':'https://linkedin.com/in/current/'}]
+        resolve=MagicMock(side_effect=lambda url:url)
+        with self.assertRaisesRegex(RuntimeError, 'public profile URL is unresolved'):
+            match_sent_profile_url('https://linkedin.com/in/ACoObserved/',profiles,'a',resolve,{})
+        resolve.assert_called_once_with('https://linkedin.com/in/ACoObserved/')
+
     def test_url_normalization_and_direct_matching_need_no_requests(self):
         profiles=[{'id':'t','status':'sent','assigned_account_id':'a','linkedin_url':'https://linkedin.com/in/oleg/'}]
         resolve=MagicMock()

@@ -704,8 +704,10 @@ def _resolve_profile_redirect(page: Page, url: str) -> str:
         response = page.context.request.get(url, timeout=15_000, max_redirects=5)
         if not response.ok or not profile_slug_key(response.url):
             raise RuntimeError(f"Profile URL resolution blocked (HTTP {response.status}); not treating it as outside-list.")
-        from app.outreach_reply_identity import canonical_member_url
+        from app.outreach_reply_identity import canonical_member_url, is_opaque_member_url
         canonical = canonical_member_url(response.url, response.text()[:512_000])
+        if is_opaque_member_url(canonical):
+            raise RuntimeError("HTTP lookup retained an internal member ID; browser verification required.")
         logger.info("PROFILE URL RESOLUTION | source_member=%s | canonical_member=%s",
                     profile_slug_key(url), profile_slug_key(canonical))
         return canonical
@@ -724,7 +726,7 @@ def _resolve_profile_redirect(page: Page, url: str) -> str:
 
 def _resolve_profile_in_browser(page: Page, url: str) -> str:
     """Resolve in a separate authenticated tab, leaving the chat untouched."""
-    from app.outreach_reply_identity import canonical_member_url
+    from app.outreach_reply_identity import canonical_member_url, is_opaque_member_url
     profile_page = None
     try:
         profile_page = page.context.new_page()
@@ -736,11 +738,28 @@ def _resolve_profile_in_browser(page: Page, url: str) -> str:
                 raise RuntimeError("Profile navigation reached login or a checkpoint.")
             head = profile_page.locator("head").inner_html(timeout=5_000)
             canonical = canonical_member_url(profile_page.url, head)
-            if profile_slug_key(canonical) != profile_slug_key(url) or attempt == 4:
+            if not is_opaque_member_url(canonical):
                 logger.info("PROFILE URL RESOLUTION | strategy=browser | source_member=%s | canonical_member=%s",
                             profile_slug_key(url), profile_slug_key(canonical))
                 return canonical
             profile_page.wait_for_timeout(500)
+        # Only inspect this recipient's own contact-info dialog. Never collect
+        # unrelated profile links from recommendations or the full page body.
+        contact_url = profile_page.url.split('?', 1)[0].rstrip('/') + '/overlay/contact-info/'
+        response = profile_page.goto(contact_url, wait_until="domcontentloaded", timeout=30_000)
+        if response is None or not response.ok or not profile_slug_key(profile_page.url.split('/overlay/', 1)[0]):
+            raise RuntimeError("Contact info was blocked or redirected to login.")
+        dialog = profile_page.get_by_role("dialog")
+        dialog.wait_for(state="visible", timeout=10_000)
+        links = dialog.locator('a[href]').evaluate_all('(anchors) => anchors.map(a => a.href)')
+        public_urls = {profile_slug_key(link): link for link in links
+                       if profile_slug_key(link) and not is_opaque_member_url(link)}
+        if len(public_urls) != 1:
+            raise RuntimeError("Contact info did not provide a unique public member URL.")
+        canonical = next(iter(public_urls.values()))
+        logger.info("PROFILE URL RESOLUTION | strategy=contact-info | source_member=%s | canonical_member=%s",
+                    profile_slug_key(url), profile_slug_key(canonical))
+        return canonical
     except Exception as exc:
         logger.warning("PROFILE URL BROWSER FAILED | error_type=%s", type(exc).__name__)
         raise RuntimeError("Profile URL could not be verified via request or browser; preserving Replies.") from None

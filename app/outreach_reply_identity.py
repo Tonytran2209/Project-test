@@ -7,6 +7,11 @@ from urllib.parse import urljoin
 from app.outreach_reply_direction import profile_slug_key
 
 
+def is_opaque_member_url(url: str) -> bool:
+    """Internal LinkedIn member IDs are not a public-profile slug."""
+    return profile_slug_key(url).startswith('aco')
+
+
 def canonical_member_url(final_url: str, html: str) -> str:
     """Use a member page's canonical/og:url link, never a login or external URL."""
     if not profile_slug_key(final_url):
@@ -66,4 +71,6 @@ def match_sent_profile_url(profile_url: str, sent_profiles: list[dict], account_
         return cache[initial]
 
     observed = canonical(profile_url)
+    if is_opaque_member_url('https://www.linkedin.com/in/' + observed + '/'):
+        raise RuntimeError('Recipient still has an internal member ID; public profile URL is unresolved, preserving Replies.')
     return [p for p in eligible if profile_slug_key(p['linkedin_url']) == observed]

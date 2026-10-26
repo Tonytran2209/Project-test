@@ -25,6 +25,34 @@ class ProfileResolutionTests(unittest.TestCase):
         self.page.context.new_page.assert_not_called()
         self.request_response.dispose.assert_called_once()
 
+    def test_http_internal_id_is_not_accepted_as_resolved(self):
+        self.request_response.url = self.url
+        self.assertEqual(self.ns['_resolve_profile_redirect'](self.page, self.url), self.resolved)
+        self.page.context.new_page.assert_called_once()
+
+    def contact_info(self, links):
+        self.browser.url = self.url
+        self.browser.get_by_role.return_value.locator.return_value.evaluate_all.return_value = links
+
+    def test_internal_id_uses_only_own_contact_info_public_url(self):
+        self.contact_info([self.resolved, 'mailto:person@example.com', self.url])
+        self.assertEqual(self.ns['_resolve_profile_in_browser'](self.page, self.url), self.resolved)
+        self.assertEqual(self.browser.goto.call_count, 2)
+        self.assertEqual(self.browser.goto.call_args.args[0], self.url + 'overlay/contact-info/')
+        self.browser.get_by_role.assert_called_once_with('dialog')
+        self.browser.close.assert_called_once()
+
+    def test_unchanged_internal_id_without_public_url_is_failure_not_outsider(self):
+        self.contact_info([self.url])
+        with self.assertRaisesRegex(RuntimeError, 'preserving Replies'):
+            self.ns['_resolve_profile_in_browser'](self.page, self.url)
+        self.browser.close.assert_called_once()
+
+    def test_ambiguous_contact_info_is_not_guessed(self):
+        self.contact_info([self.resolved, 'https://linkedin.com/in/someone-else/'])
+        with self.assertRaisesRegex(RuntimeError, 'preserving Replies'):
+            self.ns['_resolve_profile_in_browser'](self.page, self.url)
+
     def test_reset_falls_back_and_keeps_original_case(self):
         self.page.context.request.get.side_effect = RuntimeError('ECONNRESET cookie=SECRET')
         self.assertEqual(self.ns['_resolve_profile_redirect'](self.page, self.url), self.resolved)

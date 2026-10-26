@@ -34,6 +34,13 @@ are used as identity substitutes. Opaque member IDs retain their original case
 when accessed. Request exception text is not logged because it can contain
 session cookies. `REPLY URL CHECK` records the account, chat name and observed
 profile URL before lookup, including when lookup subsequently fails.
+An internal `/in/ACo...` URL is not a resolved public profile URL. If HTTP
+metadata retains it, browser resolution is mandatory. If the profile address
+and canonical metadata still contain internal IDs, the temporary tab opens
+that same recipient's Contact info overlay and reads a unique public member
+link from its dialog (not recommendations or other page links). Missing or
+ambiguous public links fail verification, never become `profile_not_in_sent_list`.
+This does not resolve or visit any profile from the stored sent-target list.
 Matched rows retain their original sent target and stored profile URL, preserving
 campaign/batch identity. Outsiders (including company conversations) are skipped
 without reading full history; opened threads have their unread state restored.
