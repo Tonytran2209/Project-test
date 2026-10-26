@@ -2,7 +2,8 @@
 
 The existing Acceptance worker handles both manual requests and scheduled checks.
 The LinkedIn checker, eligibility rules and original Connect batch attribution are unchanged.
-No new Supabase tables or migrations are needed.
+The calendar recheck itself requires no new schema. Automatic Ready Messages
+requires `outreach_ready_batches.sql`; see [AUTO_READY_MESSAGES.md](AUTO_READY_MESSAGES.md).
 
 ## Calendar and two independent cursors
 

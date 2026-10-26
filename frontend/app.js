@@ -5920,6 +5920,7 @@ async function openPreparedMessageBatch(batchId) {
                     ${escapeHtml(target.linkedin_url || "—")}
                   </a>
                   <p class="panel-meta">Company: ${escapeHtml(target.company_name || "Not saved")}</p>
+                  ${target.message_text ? `<p class="ready-draft-preview">${escapeHtml(target.message_text)}</p>` : ""}
                   </div>
                 </div>
               `).join("")
@@ -5940,10 +5941,12 @@ async function openPreparedMessageBatch(batchId) {
 
     // The snapshot drawer owns vertical scrolling while it is open.
     document.body.style.overflow = "hidden";
+    return true;
   } catch (error) {
     window.alert(
       error.message || String(error)
     );
+    return false;
   }
 }
 
@@ -9137,6 +9140,22 @@ renderOutreachSubmittingState();
 loadOutreachDashboard();
 
 renderWorkerActivity();
+window.outreachReadyNavigation = async (batchId) => {
+  switchTab("outreach");
+  setOutreachProcessTab("messages");
+  await loadMessageBatches();
+  const batch = getMessageBatchById(batchId);
+  if (batch) {
+    const week = getWeekInfo(batch.created_at);
+    if (week) state.messageBatchWeekKey = week.key;
+    state.messageBatchSourceFilter = getMessageBatchSourceConnectIds(batch)[0]?.id || "all";
+    renderMessagePreparation();
+  }
+  if (await openPreparedMessageBatch(batchId) === false) throw new Error("Could not open Ready batch.");
+};
+window.addEventListener("outreach-ready-updated", () => {
+  void loadMessageBatches().then(() => renderMessagePreparation());
+});
 void loadWorkerActivity();
 window.setInterval(() => {
   if (!document.hidden) void loadWorkerActivity();

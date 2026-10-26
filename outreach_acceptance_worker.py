@@ -144,6 +144,7 @@ class OutreachAcceptanceWorker:
 
         try:
             while not self._stop_requested:
+                self._prepare_ready_batches_safely()
                 if self.schedule is not None:
                     try:
                         if self.schedule.tick(datetime.now(timezone.utc)):
@@ -184,6 +185,22 @@ class OutreachAcceptanceWorker:
     # =====================================================
     # CLAIM
     # =====================================================
+
+    def _prepare_ready_batches_safely(self, *, force=False):
+        # @layer business
+        # @feature messages
+        now = time.monotonic()
+        if not force and now - getattr(self, '_last_ready_prepare', -60) < 60:
+            return
+        self._last_ready_prepare = now
+        try:
+            from app.outreach_ready_batches import prepare_accepted_ready_batches
+            summary = prepare_accepted_ready_batches(client=self.client)
+            if summary['batches']:
+                print('MESSAGES READY | batches=', len(summary['batches']), flush=True)
+        except Exception as exc:
+            # Acceptance must still be recorded if preparation/SQL is unavailable.
+            print(f'Auto prepare failed (will retry): {type(exc).__name__}: {exc}', file=sys.stderr)
 
     def _claim_next_check_safely(
         self,
@@ -471,6 +488,16 @@ class OutreachAcceptanceWorker:
                             result=result,
                         )
 
+                        if result.status == 'accepted':
+                            try:
+                                from app.linkedin_profile_message import get_profile_name
+                                name = get_profile_name(browser.page)['first_name']
+                                (self.client.table('outreach_job_targets')
+                                 .update({'ready_first_name': name})
+                                 .eq('id', target['target_id']).execute())
+                            except Exception as exc:
+                                print(f'Auto prepare name unavailable: {type(exc).__name__}: {exc}', file=sys.stderr)
+
                         # ---------------------------------
                         # LIVE RUN PROGRESS
                         # ---------------------------------
@@ -555,6 +582,7 @@ class OutreachAcceptanceWorker:
             # ---------------------------------------------
             # COMPLETE RUN
             # ---------------------------------------------
+            self._prepare_ready_batches_safely(force=True)
             update_acceptance_check_run(
                 check_id=check_id,
                 checked_count=(

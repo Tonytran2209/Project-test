@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="./session-status.css?v=20260925-session-status-2" />
   <link rel="stylesheet" href="./usage-guide.css?v=20260926-replies-schedule-1" />
   <link rel="stylesheet" href="./message-send-dialog.css?v=20261007-campaign-template-1" />
+  <link rel="stylesheet" href="./ready-notifications.css?v=20261026-ready-1" />
 </head>
 
 <body class="login-mode">
@@ -391,6 +392,27 @@
             <span class="button-icon">Ⅱ</span>
             <span id="stopScanButtonText">Stop scan</span>
           </button>
+
+          <button id="readyNotificationsButton" class="topbar-icon-button" type="button" aria-label="Ready batches" aria-controls="readyNotificationsPopover" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+            <span id="readyNotificationsBadge" class="ready-notification-dot" hidden></span>
+            <span class="topbar-icon-tooltip">Ready batches</span>
+          </button>
+          <div id="readyNotificationsPopover" class="ready-notifications" role="dialog" aria-label="Ready batches" hidden>
+            <div class="ready-notifications-heading"><strong>Ready batches</strong><button id="readyNotificationsClose" type="button" aria-label="Close Ready batches">×</button></div>
+            <div class="ready-notifications-toolbar">
+              <label><input id="readyNotificationsSelectAll" type="checkbox" aria-label="Select all Ready batches"> Select all</label>
+              <button id="readyNotificationsDelete" class="secondary-button" type="button" disabled>Delete</button>
+            </div>
+            <p id="readyNotificationsError" class="ready-notifications-error" role="alert" hidden></p>
+            <div id="readyNotificationsList" class="ready-notifications-list" aria-live="polite"></div>
+          </div>
+          <dialog id="readyDeleteDialog" class="ready-delete-dialog" aria-labelledby="readyDeleteTitle">
+            <h3 id="readyDeleteTitle">Delete selected batches?</h3>
+            <p>Draft messages will be deleted. Connect and Acceptance history will stay.</p>
+            <p id="readyDeleteError" class="ready-notifications-error" role="alert" hidden></p>
+            <div><button id="readyDeleteCancel" class="secondary-button" type="button">Cancel</button><button id="readyDeleteConfirm" class="secondary-button ready-delete-confirm" type="button">Delete batches</button></div>
+          </dialog>
 
           <button id="acceptanceInsightsDrawerButton" class="topbar-icon-button" type="button" aria-label="Acceptance Insights" aria-controls="acceptanceInsightsDrawer" aria-expanded="false">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="m7 15 4-4 3 2 5-7"/></svg>
@@ -1432,7 +1454,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./connect-input.js?v=20261023-match-preview-1"></script>
-  <script src="./app.js?v=20261026-reply-refresh-recovery-1"></script>
+  <script src="./app.js?v=20261026-auto-ready-1"></script>
+  <script src="./ready-notifications.js?v=20261026-ready-1"></script>
   <script src="./login.js?v=20260923-entry-3"></script>
   <script src="./usage-guide.js?v=20260926-replies-schedule-1"></script>
 </body>

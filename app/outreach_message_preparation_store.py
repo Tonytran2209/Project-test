@@ -1128,6 +1128,8 @@ def get_prepared_message_batch(
                 "assigned_account_id,"
                 "linkedin_url,"
                 "normalized_url,"
+                "message_text,"
+                "first_name,"
                 "status,"
                 "created_at,"
                 "updated_at"
@@ -1172,13 +1174,15 @@ def get_prepared_message_batch(
 
 
 def get_campaign_message_template_for_batch(
-    batch_id: str,
+    batch_id: str | None,
     *,
     client: Client | None = None,
+    campaign_id: str = "",
 ) -> dict:
     """Find the latest saved template from any batch in this campaign."""
     active_client = client if client is not None else get_outreach_supabase_client()
-    batch = get_prepared_message_batch(batch_id, client=active_client)
+    batch = (get_prepared_message_batch(batch_id, client=active_client) if batch_id
+             else {"campaign_id": campaign_id})
     if batch is None:
         raise OutreachMessagePreparationStoreError("Message batch not found.")
 

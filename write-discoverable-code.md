@@ -78,6 +78,7 @@ rg -n -B 1 -A 1 '@feature replies' app frontend
 | Gửi trả lời | `app/outreach_reply_send_store.py`, `outreach_reply_send_worker.py` |
 | Account và session | `app/outreach_account_pool.py`, `app/outreach_session_status.py`, `outreach_session_worker.py` |
 | Campaign performance | `app/outreach_campaign_performance_store.py` |
+| Accept → Ready tự động, chuông và xóa batch bản nháp | `app/outreach_ready_batches.py`, `outreach_ready_batches.sql`, `frontend/ready-notifications.js`, `frontend/ready-notifications.css` |
 | Dịch vụ Replies trên Mac | `git-meta/reply_check_schedule_service.sh`, `git-meta/reply_send_workers_service.sh` |
 
 `git-meta` chỉ giữ script và hướng dẫn dịch vụ worker; không tạo lại bản sao `app`, `backend` hoặc `frontend` trong đó. Cập nhật bảng này nếu chuyển module hoặc đổi trách nhiệm của module.

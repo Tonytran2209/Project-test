@@ -52,6 +52,9 @@ from app.outreach_message_preparation_store import (
 )
 
 from app.outreach_campaign_performance_store import get_campaign_performance
+from app.outreach_ready_batches import (
+    list_ready_batch_notifications, mark_ready_batch_seen, delete_ready_message_batches,
+)
 
 from app.outreach_message_queue_store import (
     OutreachMessageQueueStoreError,
@@ -819,6 +822,43 @@ async def get_outreach_message_preparation_api() -> JSONResponse:
         },
     )
 
+
+
+@app.get("/api/outreach/messages/ready-notifications")
+async def ready_batch_notifications_api() -> JSONResponse:
+    try:
+        return JSONResponse({'ok': True, 'items': list_ready_batch_notifications()})
+    except Exception:
+        logger.exception('Could not load Ready notifications')
+        return JSONResponse({'ok': False, 'error': 'Could not load Ready batches.'}, status_code=503)
+
+
+@app.post("/api/outreach/messages/ready-notifications/{batch_id}/seen")
+async def ready_batch_seen_api(batch_id: str) -> JSONResponse:
+    try:
+        from uuid import UUID
+        mark_ready_batch_seen(str(UUID(batch_id)))
+        return JSONResponse({'ok': True})
+    except ValueError:
+        return JSONResponse({'ok': False, 'error': 'Invalid batch ID.'}, status_code=400)
+    except Exception:
+        logger.exception('Could not mark Ready notification seen')
+        return JSONResponse({'ok': False, 'error': 'Could not update notification.'}, status_code=503)
+
+
+@app.post("/api/outreach/messages/ready-batches/delete")
+async def delete_ready_batches_api(request: Request) -> JSONResponse:
+    try:
+        payload = await request.json()
+        if not isinstance(payload, dict) or not isinstance(payload.get('batch_ids'), list):
+            raise ValueError('Select Ready batches to delete.')
+        result = delete_ready_message_batches(payload['batch_ids'])
+        return JSONResponse({'ok': True, **(result or {})})
+    except (ValueError, TypeError):
+        return JSONResponse({'ok': False, 'error': 'Invalid batch selection.'}, status_code=400)
+    except Exception:
+        logger.exception('Could not delete Ready batches')
+        return JSONResponse({'ok': False, 'error': 'Could not delete. Refresh and select only unsent Ready batches.'}, status_code=409)
 
 
 @app.get("/api/outreach/messages/batches")
