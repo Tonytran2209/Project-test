@@ -1,137 +1,152 @@
-"""Offline regression tests for sent-only Unread gating; no LinkedIn/DB access."""
+"""URL-only reply matching; offline tests, never opens LinkedIn or sends messages."""
 import ast
 from pathlib import Path
 import re
-from types import SimpleNamespace
 import unicodedata
 import unittest
 from unittest.mock import MagicMock
-from urllib.parse import unquote, urlparse
 
-from app.outreach_reply_direction import (
-    profile_slug_key, same_person_name, sent_target_from_own_messages,
-    sent_target_from_unverified_message, verify_sent_message_events,
-)
+from app.outreach_reply_identity import match_sent_profile_url, canonical_member_url
+from app.outreach_reply_direction import profile_slug_key, verify_sent_message_events
 
 
 class SentOnlyReplyTests(unittest.TestCase):
     def setUp(self):
-        tree = ast.parse(Path('outreach_reply_check_worker.py').read_text())
-        names = {'_normalize_name', '_profile_name_from_linkedin_url',
-                 'sent_candidates_for_unread_thread', 'match_unread_by_profile_url'}
-        nodes = [ast.ImportFrom(module='__future__', names=[ast.alias(name='annotations')], level=0)]
-        nodes += [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names]
-        self.ns = dict(re=re, unicodedata=unicodedata, urlparse=urlparse, unquote=unquote,
-                       profile_slug_key=profile_slug_key, same_person_name=same_person_name,
-                       sent_target_from_own_messages=sent_target_from_own_messages,
-                       sent_target_from_unverified_message=sent_target_from_unverified_message,
-                       verify_sent_message_events=verify_sent_message_events,
-                       BETWEEN_CONVERSATIONS_MS=0, logger=MagicMock())
-        self.ns['_messaging_surfaces'] = lambda page: [page]
-        for name in ['open_matched_conversation', '_active_thread_profile_key',
-                     'load_full_conversation', 'mark_active_thread_as_unread']:
-            self.ns[name] = MagicMock()
-        self.ns['open_matched_conversation'].return_value = 'https://www.linkedin.com/messaging/thread/test/'
-        self.ns['_active_thread_profile_key'].return_value = 'josh-lynch'
-        self.ns['load_full_conversation'].return_value = [{'text': 'Hello', 'sender_type': 'incoming', 'is_incoming': True}]
-        exec(compile(ast.fix_missing_locations(ast.Module(body=nodes, type_ignores=[])), 'sent_only_test', 'exec'), self.ns)
-        self.page = MagicMock()
-        self.profile = {'id': 'sent-1', 'assigned_account_id': 'outreach_account_05',
-                        'status': 'sent', 'linkedin_url': 'https://www.linkedin.com/in/josh-lynch/',
-                        'normalized_name': 'josh lynch', 'message_text': 'A unique outbound message long enough to match.'}
+        tree=ast.parse(Path('outreach_reply_check_worker.py').read_text())
+        nodes=[ast.ImportFrom(module='__future__',names=[ast.alias(name='annotations')],level=0)]
+        nodes += [n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in
+                  {'_normalize_name','match_unread_by_profile_url'}]
+        self.ns=dict(re=re,unicodedata=unicodedata,logger=MagicMock(),
+                     match_sent_profile_url=match_sent_profile_url,profile_slug_key=profile_slug_key,
+                     verify_sent_message_events=verify_sent_message_events,BETWEEN_CONVERSATIONS_MS=0)
+        for name in ['open_matched_conversation','_active_thread_profile_url','load_full_conversation',
+                     'mark_active_thread_as_unread','_resolve_profile_redirect']:
+            self.ns[name]=MagicMock()
+        self.ns['open_matched_conversation'].return_value='https://www.linkedin.com/messaging/thread/test/'
+        self.ns['_active_thread_profile_url'].return_value='https://www.linkedin.com/in/josh-lynch/'
+        self.ns['_resolve_profile_redirect'].side_effect=lambda page,url:url
+        self.ns['load_full_conversation'].return_value=[{'text':'New reply','sender_type':'incoming','is_incoming':True}]
+        self.ns['_messaging_surfaces']=lambda page:[page]
+        exec(compile(ast.fix_missing_locations(ast.Module(body=nodes,type_ignores=[])),'url_matching_test','exec'),self.ns)
+        self.page=MagicMock()
+        self.profile={'id':'sent-1','assigned_account_id':'outreach_account_05','status':'sent',
+                      'linkedin_url':'https://www.linkedin.com/in/josh-lynch/','message_text':'Original outreach text.'}
 
-    def match(self, thread, profiles=None):
-        return self.ns['match_unread_by_profile_url'](
-            self.page, unread_names=[thread], sent_profiles=profiles if profiles is not None else [self.profile],
-            account_id='outreach_account_05')
+    def match(self, name='Josh Lynch', profiles=None, **fields):
+        return self.ns['match_unread_by_profile_url'](self.page,
+            unread_names=[{'name':name,'thread_url':'',**fields}],
+            sent_profiles=profiles if profiles is not None else [self.profile],account_id='outreach_account_05')
 
-    def test_golden_gate_with_empty_sent_list_is_not_opened(self):
-        self.assertEqual(self.match({'name': 'Golden Gate University', 'thread_url': ''}, []), [])
+    def test_empty_sent_list_never_opens_golden_gate(self):
+        self.assertEqual(self.match('Golden Gate University',profiles=[]),[])
         self.ns['open_matched_conversation'].assert_not_called()
+
+    def test_company_chat_is_inspected_for_url_but_history_is_not_read(self):
+        self.ns['_active_thread_profile_url'].return_value='https://www.linkedin.com/company/golden-gate/'
+        self.assertEqual(self.match('Golden Gate University'),[])
         self.ns['load_full_conversation'].assert_not_called()
-        self.ns['mark_active_thread_as_unread'].assert_not_called()
-
-    def test_outside_name_is_skipped_before_browser_action(self):
-        self.assertEqual(self.match({'name': 'Golden Gate University', 'thread_url': ''}), [])
-        self.ns['open_matched_conversation'].assert_not_called()
-
-    def test_wrong_account_or_unsent_target_is_skipped(self):
-        for change in [{'assigned_account_id': 'outreach_account_07'}, {'status': 'pending'}, {'status': 'failed'}]:
-            self.assertEqual(self.match({'name': 'Josh Lynch', 'thread_url': ''}, [{**self.profile, **change}]), [])
-        self.ns['open_matched_conversation'].assert_not_called()
-
-    def test_known_member_is_read_and_linked_to_original_target(self):
-        result = self.match({'name': 'Josh Lynch', 'thread_url': ''})
-        self.assertEqual(result[0]['sent_profile']['id'], 'sent-1')
-        self.assertEqual(result[0]['match_reason'], 'exact_thread_profile_url')
-        self.ns['load_full_conversation'].assert_called_once()
+        self.ns['_resolve_profile_redirect'].assert_not_called()
         self.ns['mark_active_thread_as_unread'].assert_called_once()
 
-    def test_row_profile_url_handles_changed_display_name(self):
-        result = self.match({'name': 'Different Display Name', 'thread_url': '', 'linkedin_url': self.profile['linkedin_url']})
-        self.assertEqual(len(result), 1)
-
-    def test_explicit_unknown_row_url_overrides_same_name(self):
-        self.assertEqual(self.match({'name': 'Josh Lynch', 'thread_url': '', 'linkedin_url': '/in/someone-else/'}), [])
+    def test_wrong_account_and_unsent_targets_are_not_checked(self):
+        for change in [{'assigned_account_id':'outreach_account_07'},{'status':'pending'},{'status':'failed'}]:
+            self.assertEqual(self.match(profiles=[{**self.profile,**change}]),[])
         self.ns['open_matched_conversation'].assert_not_called()
 
-    def test_opened_profile_mismatch_is_not_read(self):
-        self.ns['_active_thread_profile_key'].return_value = 'other-josh'
-        self.assertEqual(self.match({'name': 'Josh Lynch', 'thread_url': ''}), [])
+    def test_stan_abbreviated_name_does_not_gate_matching(self):
+        result=self.match('Stan M.')
+        self.assertEqual(result[0]['sent_profile']['id'],'sent-1')
+        self.assertEqual(result[0]['match_reason'],'verified_member_url')
+        self.ns['_resolve_profile_redirect'].assert_not_called()
+
+    def test_display_name_completely_different_does_not_change_url_identity(self):
+        self.assertEqual(self.match('Different Name')[0]['sent_profile']['id'],'sent-1')
+
+    def test_outside_member_is_not_read_even_when_name_matches(self):
+        self.ns['_active_thread_profile_url'].return_value='https://www.linkedin.com/in/other-person/'
+        self.assertEqual(self.match(),[])
         self.ns['load_full_conversation'].assert_not_called()
+
+    def test_header_identity_is_not_overridden_by_a_stale_row_url(self):
+        self.ns['_active_thread_profile_url'].return_value='https://www.linkedin.com/in/other-person/'
+        self.assertEqual(self.match(linkedin_url=self.profile['linkedin_url']),[])
+        self.ns['load_full_conversation'].assert_not_called()
+
+    def test_unknown_url_is_an_error_not_a_silent_skip(self):
+        self.ns['_active_thread_profile_url'].return_value=''
+        with self.assertRaisesRegex(RuntimeError,'URL unresolved'):
+            self.match()
+        self.ns['load_full_conversation'].assert_not_called()
+
+    def test_missing_url_cannot_be_verified_by_identical_message_text(self):
+        self.ns['_active_thread_profile_url'].return_value=''
+        self.ns['load_full_conversation'].return_value=[{'text':self.profile['message_text'],'is_own_message':True}]
+        with self.assertRaisesRegex(RuntimeError,'URL unresolved'):
+            self.match()
+
+    def test_verified_saved_thread_remains_available(self):
+        self.profile['verified_threads']=['https://www.linkedin.com/messaging/thread/test']
+        self.ns['_active_thread_profile_url'].return_value=''
+        self.assertEqual(self.match('Stan M.')[0]['sent_profile']['id'],'sent-1')
+
+    def test_row_url_fallback_requires_exact_opened_thread(self):
+        self.ns['_active_thread_profile_url'].return_value=''
+        result=self.match(thread_url='https://www.linkedin.com/messaging/thread/test/',linkedin_url=self.profile['linkedin_url'])
+        self.assertEqual(result[0]['sent_profile']['id'],'sent-1')
+        with self.assertRaisesRegex(RuntimeError,'URL unresolved'):
+            self.match(thread_url='https://www.linkedin.com/messaging/thread/wrong/',linkedin_url=self.profile['linkedin_url'])
+
+    def test_redirect_keeps_original_target_and_url(self):
+        self.profile['linkedin_url']='https://www.linkedin.com/in/old-josh/'
+        self.ns['_resolve_profile_redirect'].side_effect=lambda page,url:'https://www.linkedin.com/in/josh-lynch/'
+        result=self.match()
+        self.assertEqual(result[0]['sent_profile']['id'],'sent-1')
+        self.assertEqual(result[0]['linkedin_url'],self.profile['linkedin_url'])
+
+    def test_failed_redirect_preserves_snapshot_instead_of_skipping(self):
+        self.ns['_active_thread_profile_url'].return_value='https://www.linkedin.com/in/new-josh/'
+        self.ns['_resolve_profile_redirect'].side_effect=RuntimeError('HTTP 429')
+        with self.assertRaisesRegex(RuntimeError,'429'):
+            self.match()
+        self.ns['load_full_conversation'].assert_not_called()
+
+    def test_read_and_unread_restore_use_actual_conversation_page(self):
+        owner=MagicMock(); owner.url='https://www.linkedin.com/messaging/thread/test/?filter=unread'
+        self.ns['_messaging_surfaces']=lambda page:[page,owner]
+        self.match()
+        self.assertIs(self.ns['load_full_conversation'].call_args.args[0],owner)
+        self.assertIs(self.ns['mark_active_thread_as_unread'].call_args.args[0],owner)
+
+    def test_history_error_remains_a_failure(self):
+        self.ns['load_full_conversation'].side_effect=RuntimeError('missing scroll container')
+        with self.assertRaisesRegex(RuntimeError,'missing scroll container'):
+            self.match()
         self.ns['mark_active_thread_as_unread'].assert_called_once()
 
-    def test_name_only_without_sent_identity_is_not_saved(self):
-        self.ns['_active_thread_profile_key'].return_value = ''
-        with self.assertRaisesRegex(RuntimeError, 'identity unresolved'):
-            self.match({'name': 'Josh Lynch', 'thread_url': ''})
 
-    def test_compact_slug_is_a_candidate_but_still_requires_identity(self):
-        self.profile.update(linkedin_url='https://www.linkedin.com/in/joshlynch/', normalized_name='joshlynch')
-        self.ns['_active_thread_profile_key'].return_value = 'joshlynch'
-        self.assertEqual(self.match({'name': 'Josh Lynch', 'thread_url': ''})[0]['sent_profile']['id'], 'sent-1')
+class CanonicalUrlTests(unittest.TestCase):
+    def test_url_normalization_and_direct_matching_need_no_requests(self):
+        profiles=[{'id':'t','status':'sent','assigned_account_id':'a','linkedin_url':'https://linkedin.com/in/oleg/'}]
+        resolve=MagicMock()
+        self.assertEqual(match_sent_profile_url('https://www.linkedin.com/in/OLEG/?trk=x',profiles,'a',resolve,{})[0]['id'],'t')
+        resolve.assert_not_called()
 
-    def test_saved_thread_verifies_without_exact_sent_text(self):
-        self.profile['verified_threads'] = ['https://www.linkedin.com/messaging/thread/test']
-        self.ns['_active_thread_profile_key'].return_value = ''
-        result = self.match({'name': 'Changed Name', 'thread_url': 'https://www.linkedin.com/messaging/thread/test/?x=1'})
-        self.assertEqual(result[0]['match_reason'], 'verified_row_or_saved_thread')
-        self.assertEqual(result[0]['sent_profile']['id'], 'sent-1')
+    def test_aliases_are_cached_within_the_scan(self):
+        profiles=[{'id':'t','status':'sent','assigned_account_id':'a','linkedin_url':'https://linkedin.com/in/old/'}]
+        resolve=MagicMock(return_value='https://linkedin.com/in/current/'); cache={}
+        for _ in range(2):
+            self.assertEqual(match_sent_profile_url('https://linkedin.com/in/current/',profiles,'a',resolve,cache)[0]['id'],'t')
+        self.assertEqual(resolve.call_count,2)
 
-    def test_row_member_url_verifies_when_opened_thread_matches(self):
-        self.ns['_active_thread_profile_key'].return_value = ''
-        result = self.match({'name': 'Josh Lynch', 'thread_url': 'https://www.linkedin.com/messaging/thread/test/',
-                             'linkedin_url': self.profile['linkedin_url']})
-        self.assertEqual(result[0]['match_reason'], 'verified_row_or_saved_thread')
+    def test_html_canonical_handles_unchanged_url_bar(self):
+        self.assertEqual(canonical_member_url('https://linkedin.com/in/old/',
+            '<link href="/in/current/" rel="canonical">'),'https://linkedin.com/in/current/')
 
-    def test_row_identity_cannot_verify_a_different_opened_thread(self):
-        self.ns['_active_thread_profile_key'].return_value = ''
-        with self.assertRaisesRegex(RuntimeError, 'identity unresolved'):
-            self.match({'name': 'Josh Lynch', 'thread_url': 'https://www.linkedin.com/messaging/thread/different/',
-                        'linkedin_url': self.profile['linkedin_url']})
-
-    def test_history_and_unread_restore_use_actual_opened_page(self):
-        owner = MagicMock()
-        owner.url = 'https://www.linkedin.com/messaging/thread/test/?filter=unread'
-        self.ns['_messaging_surfaces'] = lambda page: [page, owner]
-        self.match({'name': 'Josh Lynch', 'thread_url': ''})
-        self.assertIs(self.ns['load_full_conversation'].call_args.args[0], owner)
-        self.assertIs(self.ns['mark_active_thread_as_unread'].call_args.args[0], owner)
-
-    def test_exact_own_sent_text_can_verify_missing_profile_link(self):
-        self.ns['_active_thread_profile_key'].return_value = ''
-        self.ns['load_full_conversation'].return_value = [
-            {'text': self.profile['message_text'], 'sender_type': 'own', 'is_own_message': True}]
-        result = self.match({'name': 'Josh Lynch', 'thread_url': ''})
-        self.assertEqual(result[0]['sent_profile']['id'], 'sent-1')
-        self.assertEqual(result[0]['match_reason'], 'exact_own_sent_message')
-
-    def test_eligible_thread_read_failure_still_fails_and_restores_unread(self):
-        self.ns['load_full_conversation'].side_effect = RuntimeError('missing scroll container')
-        with self.assertRaisesRegex(RuntimeError, 'missing scroll container'):
-            self.match({'name': 'Josh Lynch', 'thread_url': ''})
-        self.ns['mark_active_thread_as_unread'].assert_called_once()
+    def test_login_or_external_canonical_does_not_prove_identity(self):
+        with self.assertRaises(RuntimeError): canonical_member_url('https://linkedin.com/login','')
+        with self.assertRaises(RuntimeError):
+            canonical_member_url('https://linkedin.com/in/oleg/',
+                                 '<link rel="canonical" href="https://evil.test/in/other/">')
 
 
-if __name__ == '__main__':
-    unittest.main()
+if __name__=='__main__': unittest.main()

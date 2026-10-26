@@ -22,37 +22,36 @@ def functions(*names):
 
 class ThreadIdentityTests(unittest.TestCase):
     def identify(self, links):
-        ns=functions('_active_thread_profile_key','_normalize_name')
-        anchors=[]
-        for label,url in links:
-            anchor=MagicMock(); anchor.inner_text.return_value=label
-            anchor.get_attribute.side_effect=lambda attr, url=url: url if attr=='href' else ''
-            anchors.append(anchor)
-        scope=MagicMock(); scope.locator.return_value.all.return_value=anchors
+        ns=functions('_active_thread_profile_url','_normalize_name')
+        scope=MagicMock(); scope.evaluate.return_value=links
         page=MagicMock(); page.locator.return_value.count.return_value=1
         page.locator.return_value.nth.return_value=scope
         ns.update(_find_unread_surface=lambda p:p,_is_visible=lambda p:True,
-                  MESSAGE_SCROLL_CONTAINER_SELECTORS=())
-        return ns['_active_thread_profile_key'](page,'Oleg Kurchenko')
+                  MESSAGE_SCROLL_CONTAINER_SELECTORS=(),UNREAD_LIST_SELECTORS=(),
+                  UNREAD_ROW_SELECTORS=(),MESSAGE_BODY_SELECTORS=(),MESSAGE_AUTHOR_SELECTORS=(),
+                  THREAD_OVERFLOW_SELECTORS=())
+        return ns['_active_thread_profile_url'](page)
 
-    def test_own_and_customer_links_do_not_hide_customer_identity(self):
-        self.assertEqual(self.identify([('Valerie Nguyen','/in/valerie/'),
-                                        ('Oleg Kurchenko','/in/olegkurchenko/')]),'olegkurchenko')
+    def test_recipient_header_takes_precedence_over_author_links(self):
+        self.assertEqual(self.identify([{'url':'https://linkedin.com/in/valerie/','kind':'author'},
+                                       {'url':'https://linkedin.com/in/olegkurchenko/','kind':'header'}]),
+                         'https://www.linkedin.com/in/olegkurchenko/')
 
     def test_repeated_author_links_for_same_recipient_are_not_ambiguous(self):
-        self.assertEqual(self.identify([('Oleg Kurchenko','/in/oleg/'),
-                                        ('Oleg Kurchenko','/in/oleg/?trk=x')]),'oleg')
+        self.assertEqual(self.identify([{'url':'https://linkedin.com/in/oleg/','kind':'author'},
+                                       {'url':'https://linkedin.com/in/oleg/?trk=x','kind':'author'}]),
+                         'https://www.linkedin.com/in/oleg/')
 
-    def test_same_name_different_profiles_is_not_guessed(self):
-        self.assertEqual(self.identify([('Oleg Kurchenko','/in/oleg-one/'),
-                                        ('Oleg Kurchenko','/in/oleg-two/')]),'')
+    def test_multiple_recipient_urls_are_not_guessed(self):
+        self.assertEqual(self.identify([{'url':'https://linkedin.com/in/one/','kind':'header'},
+                                       {'url':'https://linkedin.com/in/two/','kind':'header'}]),'')
 
-    def test_accessible_profile_label_can_identify_recipient(self):
-        self.assertEqual(self.identify([("View Oleg Kurchenko’s profile",'/in/oleg/'),
-                                        ('Valerie Nguyen','/in/valerie/')]),'oleg')
+    def test_company_header_is_identified_for_fast_skip(self):
+        self.assertEqual(self.identify([{'url':'https://linkedin.com/company/golden-gate/','kind':'header'}]),
+                         'https://linkedin.com/company/golden-gate')
 
-    def test_only_own_author_link_is_not_mistaken_for_recipient(self):
-        self.assertEqual(self.identify([('Valerie Nguyen','/in/valerie/')]),'')
+    def test_missing_profile_url_is_not_guessed_from_names(self):
+        self.assertEqual(self.identify([]),'')
 
 
 class UnreadRecoveryTests(unittest.TestCase):

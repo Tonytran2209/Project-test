@@ -7,19 +7,28 @@ restores LinkedIn's unread state; it does not send messages.
 The Replies inbox reads those saved conversations and checks for new scan data
 every 30 seconds while the tab is open, updating the selected chat when it changes.
 The worker retains the original sent target, campaign and batch context.
-Other Unread conversations are skipped before opening or reading their history;
-they are not scan failures. A member URL on the list row is preferred; otherwise
-a normalized recipient-name or compact full-name slug permits opening for
-identity verification (not saving by name alone). Previously saved target/thread
-links can also be reused, only for the same account and matching profile URL.
-Recipient-named profile links in the active conversation take precedence over
-own-author links, so a thread containing both participants' URLs is not rejected
-merely for having multiple URLs. A captured row member URL is trusted only when
-its captured thread URL matches the opened thread. No exact message-text match is
-required when URL/thread identity is verified. An eligible thread whose identity
-is still unresolved fails conservatively, preserving the previous snapshot
-instead of silently dropping the conversation. Message-role rules are unchanged.
-If no candidate identity exists, the entry is skipped rather than fuzzy-matched.
+Membership is URL-only: display names (including abbreviations like Stan M.) and
+message text are never used to decide whether a thread belongs to a sent target.
+An account without any sent targets skips all its Unread entries. Otherwise a
+thread can be opened for URL inspection, but its history is not read or saved
+until the member URL matches a successfully sent target of that same account.
+The recipient's structural header URL takes precedence over message author links.
+Sidebar rows, navigation, message-body links and outgoing-author links are excluded.
+The active-thread menu locates header scopes when message-list classes differ.
+An ambiguous header/author URL is an error, not a name-based guess.
+
+A captured row URL is used only if the captured and opened thread URLs agree.
+Previously verified target/thread links can be reused if live profile links are
+missing. Direct URL comparison strips tracking/trailing slashes and normalizes
+member slugs. On a mismatch, authenticated HTTP redirects and member-page
+canonical URLs are checked; results are cached within that account scan. This
+can add profile requests on the first unmatched URL. Blocked/failed lookups fail
+conservatively instead of treating an unverified person as outside the list.
+Matched rows retain their original sent target and stored profile URL, preserving
+campaign/batch identity. Outsiders (including company conversations) are skipped
+without reading full history; opened threads have their unread state restored.
+No exact message-text match is required to identify a thread. Message-role rules
+remain unchanged. Missing recipient URLs preserve the previous snapshot.
 
 Before each click, the worker reacquires the live Unread surface. Transient
 rerenders are retried; persistent missing filters reopen Messaging and select

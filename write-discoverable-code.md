@@ -73,6 +73,7 @@ rg -n -B 1 -A 1 '@feature replies' app frontend
 | Message template và queue | `app/linkedin_message_template.py`, `app/outreach_message_company.py`, `app/outreach_message_queue_store.py` |
 | Gửi tin nhắn | `app/outreach_message_batch_executor.py`, `app/outreach_message_executor.py`, `outreach_message_worker.py` |
 | Quét và phân vai Replies | `outreach_reply_check_worker.py`, `app/outreach_reply_direction.py` |
+| Đối chiếu URL Replies với target đã gửi | `app/outreach_reply_identity.py` |
 | Lưu Replies và yêu cầu scan | `app/outreach_reply_store.py`, `app/outreach_reply_check_requests.py` |
 | Gửi trả lời | `app/outreach_reply_send_store.py`, `outreach_reply_send_worker.py` |
 | Account và session | `app/outreach_account_pool.py`, `app/outreach_session_status.py`, `outreach_session_worker.py` |

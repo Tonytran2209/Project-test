@@ -3,8 +3,8 @@
 Flow:
     1. Open the selected Outreach LinkedIn profile.
     2. Open LinkedIn Messaging and select Unread.
-    3. Skip Unread entries outside this account's successfully sent list.
-    4. Verify eligible thread identity before saving its full history.
+    3. Inspect recipient profile URLs without using names as membership proof.
+    4. Read full history only after a URL matches this account's sent list.
     5. Save messages with explicit own/incoming/unknown roles.
     6. Use the active-thread menu beside Star to restore Mark as unread.
 
@@ -49,12 +49,10 @@ from app.outreach_reply_direction import (
     incoming_after_last_own,
     merge_conversation_snapshots,
     profile_slug_key,
-    same_person_name,
-    sent_target_from_own_messages,
-    sent_target_from_unverified_message,
     verify_sent_message_events,
 )
 from app.outreach_worker_heartbeat import worker_heartbeat
+from app.outreach_reply_identity import match_sent_profile_url
 
 
 DEFAULT_ACCOUNT_ID = "outreach_account_02"
@@ -620,181 +618,144 @@ def scan_unread_names(page: Page) -> list[dict]:
     return threads
 
 
-def _active_thread_profile_key(page: Page, unread_name: str = "") -> str:
-    """Prefer recipient-named links; own-author links must not cause ambiguity."""
+def _active_thread_profile_url(page: Page, unread_name: str = "") -> str:
+    """Read structural recipient links, never infer identity from display names.
+
+    Exclude sidebar rows, message text links and outgoing-author links. A unique
+    header URL takes precedence; otherwise require a unique non-own author URL.
+    """
     surface = _find_unread_surface(page) or page
     scopes_to_check = []
-    for selector in (
-        ".msg-thread__content",
-        ".msg-thread",
-        ".msg-conversation-container",
-    ):
-        try:
-            scopes = surface.locator(selector)
-            scopes_to_check.extend(scopes.nth(index) for index in range(scopes.count()))
-        except Exception:
-            continue
-    # Existing message-list selectors also locate author links in newer layouts.
+    # The already-supported active-thread menu also locates headers when
+    # LinkedIn changes the message-list classes. Names locate UI only here.
+    header_scopes = []
+    for selector in THREAD_OVERFLOW_SELECTORS:
+        controls = surface.locator(selector)
+        for i in range(controls.count()):
+            control = controls.nth(i)
+            if not _is_visible(control):
+                continue
+            if unread_name and _normalize_name(unread_name) not in _normalize_name(control.inner_text()):
+                continue
+            parent = control
+            for _ in range(3):
+                parent = parent.locator("xpath=..")
+                header_scopes.append(parent)
+    scopes_to_check.extend(header_scopes)
+    for selector in (".msg-thread__content", ".msg-thread", ".msg-conversation-container"):
+        scopes = surface.locator(selector)
+        scopes_to_check.extend(scopes.nth(i) for i in range(scopes.count()))
     for selector in MESSAGE_SCROLL_CONTAINER_SELECTORS:
-        try:
-            scopes = surface.locator(selector)
-            scopes_to_check.extend(scopes.nth(index).locator("xpath=..") for index in range(scopes.count()))
-        except Exception:
-            continue
-    named_keys, all_keys = set(), set()
+        scopes = surface.locator(selector)
+        scopes_to_check.extend(scopes.nth(i).locator("xpath=..") for i in range(scopes.count()))
+    header_urls, author_urls = set(), set()
     for scope in scopes_to_check:
-        try:
-            if _is_visible(scope):
-                for anchor in scope.locator('a[href*="/in/"]').all():
-                    if not _is_visible(anchor):
-                        continue
-                    key = profile_slug_key(anchor.get_attribute("href"))
-                    if not key:
-                        continue
-                    all_keys.add(key)
-                    labels = [anchor.inner_text(), anchor.get_attribute("aria-label") or ""]
-                    for label in labels:
-                        label = re.sub(r"^view\s+(.+?)(?:['’]s)?\s+profile$", r"\1", label.strip(), flags=re.I)
-                        if unread_name and same_person_name(_normalize_name(label), _normalize_name(unread_name)):
-                            named_keys.add(key)
-        except Exception:
+        if not _is_visible(scope):
             continue
-    logger.info("THREAD IDENTITY EVIDENCE | named_member_links=%s | distinct_member_links=%s",
-                len(named_keys), len(all_keys))
-    if len(named_keys) == 1:
-        return next(iter(named_keys))
-    if not unread_name and len(all_keys) == 1:
-        return next(iter(all_keys))
-    return ""
+        records = scope.evaluate(
+            r"""(scope, selectors) => Array.from(scope.querySelectorAll('a[href]')).flatMap(anchor => {
+                const url = new URL(anchor.href, location.href);
+                if (!(url.hostname === 'linkedin.com' || url.hostname.endsWith('.linkedin.com')) ||
+                    !/^\/(in|company)\/[^/]+\/?$/.test(url.pathname)) return [];
+                if (!anchor.getClientRects().length || anchor.closest('nav') || anchor.closest(selectors.sidebar) ||
+                    anchor.closest(selectors.bodies)) return [];
+                const inHistory = !!anchor.closest(selectors.history);
+                let own = false;
+                for (let node = anchor; node && node !== scope.parentElement; node = node.parentElement) {
+                    own ||= String(node.className || '').split(/\s+/).some(token =>
+                        token === 'from-me' || /--(is-me|from-me|outgoing|is-self)$/.test(token));
+                }
+                const author = !!(anchor.matches(selectors.authors) ||
+                    anchor.closest(selectors.authors) || anchor.querySelector(selectors.authors));
+                if (own || (inHistory && !author)) return [];
+                return [{url: url.origin + url.pathname, kind: inHistory ? 'author' : 'header'}];
+            })""",
+            {"sidebar": ", ".join((*UNREAD_LIST_SELECTORS, *UNREAD_ROW_SELECTORS)),
+             "history": ", ".join(MESSAGE_SCROLL_CONTAINER_SELECTORS),
+             "bodies": ", ".join(MESSAGE_BODY_SELECTORS),
+             "authors": ", ".join(MESSAGE_AUTHOR_SELECTORS)},
+        )
+        local_headers = set()
+        for record in records or []:
+            url = str(record.get("url") or "").split("?", 1)[0].rstrip("/")
+            key = profile_slug_key(url)
+            identity = f"https://www.linkedin.com/in/{key}/" if key else url
+            if record.get("kind") == "header":
+                local_headers.add(identity)
+            (header_urls if record.get("kind") == "header" else author_urls).add(identity)
+        if any(scope is candidate for candidate in header_scopes) and len(local_headers) == 1:
+            return next(iter(local_headers))
+    logger.info("THREAD URL EVIDENCE | header_urls=%s | author_urls=%s", len(header_urls), len(author_urls))
+    selected = header_urls if header_urls else author_urls
+    return next(iter(selected)) if len(selected) == 1 else ""
 
 
-# @layer business
-# @feature replies
-def sent_candidates_for_unread_thread(thread: dict, sent_profiles: list[dict], account_id: str) -> list[dict]:
-    """Gate before opening: a member URL, or exact normalized name, must match.
-
-    A name only permits inspection; it is not sufficient proof for saving.
-    Unknown slugs/display-name differences are skipped rather than guessed.
-    """
-    profiles = [profile for profile in sent_profiles
-                if profile.get("status") == "sent"
-                and profile.get("assigned_account_id") == account_id]
-    key = profile_slug_key(thread.get("linkedin_url"))
-    if key:
-        return [profile for profile in profiles if profile_slug_key(profile.get("linkedin_url")) == key]
-    thread_url = str(thread.get("thread_url") or "").split("?", 1)[0].rstrip("/")
-    linked = [profile for profile in profiles if thread_url and thread_url in profile.get("verified_threads", [])]
-    if linked:
-        return linked
-    name = _normalize_name(thread.get("name") or "")
-    return [profile for profile in profiles
-            if any(same_person_name(name, candidate) or
-                   (len(name.split()) >= 2 and name.replace(" ", "") == candidate.replace(" ", ""))
-                   for candidate in [profile.get("normalized_name") or
-                                     _profile_name_from_linkedin_url(profile.get("linkedin_url")),
-                                     *profile.get("verified_names", [])])]
+def _resolve_profile_redirect(page: Page, url: str) -> str:
+    """Follow authenticated member redirects without leaving the open chat."""
+    if not profile_slug_key(url):
+        raise RuntimeError("Only LinkedIn member URLs can be resolved.")
+    page.wait_for_timeout(300)
+    response = page.context.request.get(url, timeout=15_000, max_redirects=5)
+    try:
+        if not response.ok or not profile_slug_key(response.url):
+            raise RuntimeError(f"Profile URL resolution blocked (HTTP {response.status}); not treating it as outside-list.")
+        from app.outreach_reply_identity import canonical_member_url
+        canonical = canonical_member_url(response.url, response.text()[:512_000])
+        logger.info("PROFILE URL RESOLUTION | source_member=%s | canonical_member=%s",
+                    profile_slug_key(url), profile_slug_key(canonical))
+        return canonical
+    finally:
+        response.dispose()
 
 
 def match_unread_by_profile_url(
-    page: Page,
-    *,
-    unread_names: list[dict],
-    sent_profiles: list[dict],
-    account_id: str,
+    page: Page, *, unread_names: list[dict], sent_profiles: list[dict], account_id: str,
 ) -> list[dict]:
-    """Skip outsiders before reading history; save only verified sent targets."""
-    matched_profiles: list[dict] = []
-    sent_by_slug: dict[str, list[dict]] = {}
-    for profile in sent_profiles:
-        key = profile_slug_key(profile.get("linkedin_url"))
-        if key:
-            sent_by_slug.setdefault(key, []).append(profile)
-
+    """Match URLs only; inspect unknown rows for identity before reading history."""
+    profiles = [p for p in sent_profiles if p.get("status") == "sent"
+                and p.get("assigned_account_id") == account_id]
+    if not profiles:
+        logger.info("UNREAD SKIPPED | account=%s | count=%s | reason=no_sent_targets", account_id, len(unread_names))
+        return []
+    matched_profiles, redirect_cache = [], {}
     for unread_thread in unread_names:
         unread_name = unread_thread["name"]
-        eligible = sent_candidates_for_unread_thread(unread_thread, sent_profiles, account_id)
-        if not eligible:
-            logger.info("UNREAD SKIPPED | account=%s | name=%s | reason=not_in_sent_list",
-                        account_id, unread_name)
-            continue
-        normalized_name = _normalize_name(unread_name)
-        opened = False
-        conversation_page = page
+        opened, conversation_page = False, page
         try:
-            thread_url = open_matched_conversation(
-                page, unread_name, unread_thread["thread_url"]
-            )
+            thread_url = open_matched_conversation(page, unread_name, unread_thread.get("thread_url") or "")
             opened = True
-            # Opening/recovering Messaging can select another live browser tab.
+            captured = thread_url.split("?", 1)[0].rstrip("/")
             for candidate_page in _messaging_surfaces(page):
-                if str(candidate_page.url).split("?", 1)[0].rstrip("/") == thread_url.rstrip("/"):
+                if str(candidate_page.url).split("?", 1)[0].rstrip("/") == captured:
                     conversation_page = candidate_page
                     break
-            profile_key = _active_thread_profile_key(conversation_page, unread_name)
-            profile_url = (
-                f"https://www.linkedin.com/in/{profile_key}/" if profile_key else ""
-            )
-            candidates = sent_by_slug.get(profile_key, []) if profile_key else []
-            candidates = [profile for profile in candidates
-                          if profile.get("status") == "sent"
-                          and profile.get("assigned_account_id") == account_id]
-            if profile_key and not candidates:
-                logger.info("UNREAD SKIPPED | account=%s | name=%s | reason=profile_not_in_sent_list",
-                            account_id, unread_name)
+            profile_url = _active_thread_profile_url(conversation_page, unread_name)
+            if not profile_url:
+                expected = str(unread_thread.get("thread_url") or "").split("?", 1)[0].rstrip("/")
+                if expected and expected == captured:
+                    profile_url = str(unread_thread.get("linkedin_url") or "")
+            if not profile_url:
+                linked = [p for p in profiles if captured in p.get("verified_threads", [])]
+                keys = {profile_slug_key(p.get("linkedin_url")) for p in linked}
+                if len(keys) == 1 and next(iter(keys), ""):
+                    profile_url = str(linked[0]["linkedin_url"])
+            if not profile_url:
+                raise RuntimeError(f"Recipient profile URL unresolved for {unread_name!r}; preserving Replies instead of guessing by name.")
+            candidates = match_sent_profile_url(profile_url, profiles, account_id,
+                lambda url: _resolve_profile_redirect(conversation_page, url), redirect_cache)
+            logger.info("REPLY URL MATCH | account=%s | observed_url=%s | matched_target=%s",
+                        account_id, profile_url, candidates[0].get("id") if candidates else None)
+            if not candidates:
+                logger.info("UNREAD SKIPPED | account=%s | name=%s | reason=profile_not_in_sent_list", account_id, unread_name)
                 continue
-            match_reason = "exact_thread_profile_url"
-            if not candidates:
-                row_key = profile_slug_key(unread_thread.get("linkedin_url"))
-                captured_thread = str(thread_url).split("?", 1)[0].rstrip("/")
-                expected_thread = str(unread_thread.get("thread_url") or "").split("?", 1)[0].rstrip("/")
-                candidates = [profile for profile in eligible
-                              if (row_key and expected_thread and expected_thread == captured_thread
-                                  and row_key == profile_slug_key(profile.get("linkedin_url")))
-                              or captured_thread in profile.get("verified_threads", [])]
-                if candidates:
-                    match_reason = "verified_row_or_saved_thread"
-            conversation_events = load_full_conversation(
-                conversation_page, unread_name, account_id=account_id,
-                sent_message_text=str(candidates[0].get("message_text") or "")
-                if candidates else "",
-            )
-            if not candidates:
-                own_text_match = sent_target_from_own_messages(
-                    conversation_events, eligible,
-                )
-                if own_text_match:
-                    candidates = [own_text_match]
-                    match_reason = "exact_own_sent_message"
-                else:
-                    unverified_text_match = sent_target_from_unverified_message(
-                        conversation_events, eligible, unread_name,
-                    )
-                    if unverified_text_match:
-                        candidates = [unverified_text_match]
-                        match_reason = "unique_recipient_and_exact_sent_message"
-            if not candidates:
-                raise RuntimeError(f"Sent-list conversation identity unresolved for {unread_name!r}; "
-                                   "keeping the previous Replies snapshot instead of silently dropping it.")
-            verify_sent_message_events(
-                conversation_events, str(candidates[0].get("message_text") or ""),
-            )
-            matched_profiles.append({
-                "unread_name": unread_name,
-                "thread_url": thread_url,
-                "normalized_unread_name": normalized_name,
-                "match_reason": match_reason,
-                "similarity": 1.0,
-                "sent_profile": candidates[0],
-                "linkedin_url": profile_url or thread_url,
-                "conversation_events": conversation_events,
-            })
-            if candidates:
-                logger.info(
-                    "REPLY MATCH | reason=%s | unread_name=%s | target_id=%s",
-                    match_reason,
-                    unread_name,
-                    candidates[0].get("id"),
-                )
+            target = candidates[0]
+            events = load_full_conversation(conversation_page, unread_name, account_id=account_id,
+                                           sent_message_text=str(target.get("message_text") or ""))
+            verify_sent_message_events(events, str(target.get("message_text") or ""))
+            matched_profiles.append({"unread_name": unread_name, "thread_url": thread_url,
+                "normalized_unread_name": _normalize_name(unread_name),
+                "match_reason": "verified_member_url", "similarity": 1.0, "sent_profile": target,
+                "linkedin_url": str(target["linkedin_url"]), "conversation_events": events})
         finally:
             if opened:
                 mark_active_thread_as_unread(conversation_page, unread_name)
