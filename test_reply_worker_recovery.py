@@ -53,6 +53,10 @@ class ThreadIdentityTests(unittest.TestCase):
     def test_missing_profile_url_is_not_guessed_from_names(self):
         self.assertEqual(self.identify([]),'')
 
+    def test_opaque_member_id_case_is_preserved_for_navigation(self):
+        self.assertEqual(self.identify([{'url':'https://linkedin.com/in/ACoCaseSensitive/','kind':'header'}]),
+                         'https://www.linkedin.com/in/ACoCaseSensitive/')
+
 
 class UnreadRecoveryTests(unittest.TestCase):
     def setUp(self):

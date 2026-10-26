@@ -649,6 +649,7 @@ def _active_thread_profile_url(page: Page, unread_name: str = "") -> str:
         scopes = surface.locator(selector)
         scopes_to_check.extend(scopes.nth(i).locator("xpath=..") for i in range(scopes.count()))
     header_urls, author_urls = set(), set()
+    original_urls = {}
     for scope in scopes_to_check:
         if not _is_visible(scope):
             continue
@@ -680,14 +681,17 @@ def _active_thread_profile_url(page: Page, unread_name: str = "") -> str:
             url = str(record.get("url") or "").split("?", 1)[0].rstrip("/")
             key = profile_slug_key(url)
             identity = f"https://www.linkedin.com/in/{key}/" if key else url
+            # Comparison keys are casefolded; never send those keys back to
+            # LinkedIn: opaque member IDs may be case-sensitive.
+            original_urls.setdefault(identity, f"https://www.linkedin.com{urlparse(url).path.rstrip('/')}/" if key else url)
             if record.get("kind") == "header":
                 local_headers.add(identity)
             (header_urls if record.get("kind") == "header" else author_urls).add(identity)
         if any(scope is candidate for candidate in header_scopes) and len(local_headers) == 1:
-            return next(iter(local_headers))
+            return original_urls[next(iter(local_headers))]
     logger.info("THREAD URL EVIDENCE | header_urls=%s | author_urls=%s", len(header_urls), len(author_urls))
     selected = header_urls if header_urls else author_urls
-    return next(iter(selected)) if len(selected) == 1 else ""
+    return original_urls[next(iter(selected))] if len(selected) == 1 else ""
 
 
 def _resolve_profile_redirect(page: Page, url: str) -> str:
@@ -695,8 +699,9 @@ def _resolve_profile_redirect(page: Page, url: str) -> str:
     if not profile_slug_key(url):
         raise RuntimeError("Only LinkedIn member URLs can be resolved.")
     page.wait_for_timeout(300)
-    response = page.context.request.get(url, timeout=15_000, max_redirects=5)
+    response = None
     try:
+        response = page.context.request.get(url, timeout=15_000, max_redirects=5)
         if not response.ok or not profile_slug_key(response.url):
             raise RuntimeError(f"Profile URL resolution blocked (HTTP {response.status}); not treating it as outside-list.")
         from app.outreach_reply_identity import canonical_member_url
@@ -704,8 +709,47 @@ def _resolve_profile_redirect(page: Page, url: str) -> str:
         logger.info("PROFILE URL RESOLUTION | source_member=%s | canonical_member=%s",
                     profile_slug_key(url), profile_slug_key(canonical))
         return canonical
+    except Exception as exc:
+        # Playwright request exceptions can contain authenticated Cookie headers.
+        # Never include their message or traceback in persistent logs.
+        logger.warning("PROFILE URL REQUEST FAILED | error_type=%s | fallback=browser", type(exc).__name__)
     finally:
-        response.dispose()
+        if response is not None:
+            try:
+                response.dispose()
+            except Exception:
+                pass
+    return _resolve_profile_in_browser(page, url)
+
+
+def _resolve_profile_in_browser(page: Page, url: str) -> str:
+    """Resolve in a separate authenticated tab, leaving the chat untouched."""
+    from app.outreach_reply_identity import canonical_member_url
+    profile_page = None
+    try:
+        profile_page = page.context.new_page()
+        response = profile_page.goto(url, wait_until="domcontentloaded", timeout=30_000)
+        if response is None or not response.ok:
+            raise RuntimeError("Profile navigation was blocked.")
+        for attempt in range(5):
+            if not profile_slug_key(profile_page.url):
+                raise RuntimeError("Profile navigation reached login or a checkpoint.")
+            head = profile_page.locator("head").inner_html(timeout=5_000)
+            canonical = canonical_member_url(profile_page.url, head)
+            if profile_slug_key(canonical) != profile_slug_key(url) or attempt == 4:
+                logger.info("PROFILE URL RESOLUTION | strategy=browser | source_member=%s | canonical_member=%s",
+                            profile_slug_key(url), profile_slug_key(canonical))
+                return canonical
+            profile_page.wait_for_timeout(500)
+    except Exception as exc:
+        logger.warning("PROFILE URL BROWSER FAILED | error_type=%s", type(exc).__name__)
+        raise RuntimeError("Profile URL could not be verified via request or browser; preserving Replies.") from None
+    finally:
+        if profile_page is not None:
+            try:
+                profile_page.close()
+            except Exception:
+                pass
 
 
 def match_unread_by_profile_url(
@@ -741,6 +785,8 @@ def match_unread_by_profile_url(
                     profile_url = str(linked[0]["linkedin_url"])
             if not profile_url:
                 raise RuntimeError(f"Recipient profile URL unresolved for {unread_name!r}; preserving Replies instead of guessing by name.")
+            logger.info("REPLY URL CHECK | account=%s | unread_name=%s | observed_url=%s | sent_targets=%s",
+                        account_id, unread_name, profile_url, len(profiles))
             candidates = match_sent_profile_url(profile_url, profiles, account_id,
                 lambda url: _resolve_profile_redirect(conversation_page, url), redirect_cache)
             logger.info("REPLY URL MATCH | account=%s | observed_url=%s | matched_target=%s",

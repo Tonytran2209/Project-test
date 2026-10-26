@@ -24,6 +24,15 @@ member slugs. On a mismatch, authenticated HTTP redirects and member-page
 canonical URLs are checked; results are cached within that account scan. This
 can add profile requests on the first unmatched URL. Blocked/failed lookups fail
 conservatively instead of treating an unverified person as outside the list.
+If the HTTP lookup fails (including connection resets), the worker opens a
+temporary profile tab in the same authenticated browser context and checks its
+redirect/canonical URL without navigating away from the chat. The temporary tab
+is closed on success or failure. Login/checkpoint pages, blocked responses and
+conflicting canonical URLs remain unverified; neither names nor message URLs
+are used as identity substitutes. Opaque member IDs retain their original case
+when accessed. Request exception text is not logged because it can contain
+session cookies. `REPLY URL CHECK` records the account, chat name and observed
+profile URL before lookup, including when lookup subsequently fails.
 Matched rows retain their original sent target and stored profile URL, preserving
 campaign/batch identity. Outsiders (including company conversations) are skipped
 without reading full history; opened threads have their unread state restored.
