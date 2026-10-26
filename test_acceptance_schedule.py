@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from app.outreach_acceptance_schedule import AcceptanceSchedule, VIETNAM, cycle_weeks
 
@@ -14,13 +14,21 @@ def clock(day, hour=0, minute=0):
     return datetime.fromisoformat(day).replace(hour=hour, minute=minute, tzinfo=VIETNAM)
 
 
+class ZeroDurationSchedule(AcceptanceSchedule):
+    """Keep simulated runs on their injected date, not the machine's real clock."""
+    def tick(self, now):
+        with patch('app.outreach_acceptance_schedule.datetime', wraps=datetime) as frozen:
+            frozen.now.return_value = now
+            return super().tick(now)
+
+
 class AcceptanceScheduleTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name) / "schedule.json"
         self.calls = []
-        self.scheduler = AcceptanceSchedule(self.path, self.scan)
+        self.scheduler = ZeroDurationSchedule(self.path, self.scan)
 
     def scan(self, week, checkpoint):
         self.calls.append((week["start"], week["end"]))
@@ -76,7 +84,7 @@ class AcceptanceScheduleTests(unittest.TestCase):
 
     def test_restart_preserves_cursor_and_slot(self):
         self.scheduler.tick(clock("2026-10-26"))
-        restored = AcceptanceSchedule(self.path, self.scan)
+        restored = ZeroDurationSchedule(self.path, self.scan)
         self.assertFalse(restored.tick(clock("2026-10-26", minute=3)))
         restored.tick(clock("2026-10-27"))
         self.assertEqual(self.calls[-1][0], "2026-09-07")
@@ -89,7 +97,7 @@ class AcceptanceScheduleTests(unittest.TestCase):
         self.scheduler.scan_week = crash
         with self.assertRaises(RuntimeError):
             self.scheduler.tick(clock("2026-10-26"))
-        resumed = AcceptanceSchedule(self.path, self.scan)
+        resumed = ZeroDurationSchedule(self.path, self.scan)
         self.assertTrue(resumed.tick(clock("2026-10-26", 11)))
         self.assertEqual(resumed.state["cycles"]["2026-10-26"]["cursor"], 1)
 
@@ -116,7 +124,7 @@ class AcceptanceScheduleTests(unittest.TestCase):
     def test_slot_crossed_while_busy_runs_late_once(self):
         self.scheduler.tick(clock("2026-10-26"))
         self.scheduler.defer_busy_slots(clock("2026-11-02", 5), clock("2026-11-02", 8))
-        resumed = AcceptanceSchedule(self.path, self.scan)
+        resumed = ZeroDurationSchedule(self.path, self.scan)
         self.assertTrue(resumed.tick(clock("2026-11-02", 8)))
         self.assertEqual(resumed.state["cycles"]["2026-10-26"]["cursor"], 2)
         self.assertFalse(resumed.tick(clock("2026-11-02", 8)))
