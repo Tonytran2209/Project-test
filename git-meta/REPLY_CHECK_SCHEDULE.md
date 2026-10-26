@@ -20,9 +20,10 @@ An ambiguous header/author URL is an error, not a name-based guess.
 A captured row URL is used only if the captured and opened thread URLs agree.
 Previously verified target/thread links can be reused if live profile links are
 missing. Direct URL comparison strips tracking/trailing slashes and normalizes
-member slugs. On a mismatch, authenticated HTTP redirects and member-page
-canonical URLs are checked; results are cached within that account scan. This
-can add profile requests on the first unmatched URL. Blocked/failed lookups fail
+member slugs. On a mismatch, only the opened recipient's authenticated HTTP
+redirects and member-page canonical URL are checked; results are cached within
+that account scan and compared locally to stored target URLs. The worker never
+visits or resolves profiles from the sent list. Blocked/failed lookups fail
 conservatively instead of treating an unverified person as outside the list.
 If the HTTP lookup fails (including connection resets), the worker opens a
 temporary profile tab in the same authenticated browser context and checks its

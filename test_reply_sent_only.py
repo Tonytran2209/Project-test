@@ -97,7 +97,7 @@ class SentOnlyReplyTests(unittest.TestCase):
             self.match(thread_url='https://www.linkedin.com/messaging/thread/wrong/',linkedin_url=self.profile['linkedin_url'])
 
     def test_redirect_keeps_original_target_and_url(self):
-        self.profile['linkedin_url']='https://www.linkedin.com/in/old-josh/'
+        self.ns['_active_thread_profile_url'].return_value='https://www.linkedin.com/in/ACoJosh/'
         self.ns['_resolve_profile_redirect'].side_effect=lambda page,url:'https://www.linkedin.com/in/josh-lynch/'
         result=self.match()
         self.assertEqual(result[0]['sent_profile']['id'],'sent-1')
@@ -132,11 +132,25 @@ class CanonicalUrlTests(unittest.TestCase):
         resolve.assert_not_called()
 
     def test_aliases_are_cached_within_the_scan(self):
-        profiles=[{'id':'t','status':'sent','assigned_account_id':'a','linkedin_url':'https://linkedin.com/in/old/'}]
+        profiles=[{'id':'t','status':'sent','assigned_account_id':'a','linkedin_url':'https://linkedin.com/in/current/'}]
         resolve=MagicMock(return_value='https://linkedin.com/in/current/'); cache={}
         for _ in range(2):
-            self.assertEqual(match_sent_profile_url('https://linkedin.com/in/current/',profiles,'a',resolve,cache)[0]['id'],'t')
-        self.assertEqual(resolve.call_count,2)
+            self.assertEqual(match_sent_profile_url('https://linkedin.com/in/ACoObserved/',profiles,'a',resolve,cache)[0]['id'],'t')
+        resolve.assert_called_once_with('https://linkedin.com/in/ACoObserved/')
+
+    def test_unmatched_recipient_never_resolves_sent_list(self):
+        profiles=[{'id':str(i),'status':'sent','assigned_account_id':'a',
+                   'linkedin_url':f'https://linkedin.com/in/stored-{i}/'} for i in range(150)]
+        resolve=MagicMock(return_value='https://linkedin.com/in/outsider/')
+        self.assertEqual(match_sent_profile_url('https://linkedin.com/in/ACoObserved/',profiles,'a',resolve,{}),[])
+        resolve.assert_called_once_with('https://linkedin.com/in/ACoObserved/')
+
+    def test_matching_recipient_never_resolves_other_stored_profiles(self):
+        profiles=[{'id':str(i),'status':'sent','assigned_account_id':'a',
+                   'linkedin_url':f'https://linkedin.com/in/stored-{i}/'} for i in range(150)]
+        resolve=MagicMock(return_value='https://linkedin.com/in/stored-149/')
+        self.assertEqual(match_sent_profile_url('https://linkedin.com/in/ACoObserved/',profiles,'a',resolve,{})[0]['id'],'149')
+        resolve.assert_called_once_with('https://linkedin.com/in/ACoObserved/')
 
     def test_html_canonical_handles_unchanged_url_bar(self):
         self.assertEqual(canonical_member_url('https://linkedin.com/in/old/',

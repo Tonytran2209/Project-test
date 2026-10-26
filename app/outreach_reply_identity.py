@@ -40,7 +40,7 @@ def canonical_member_url(final_url: str, html: str) -> str:
 # @feature replies
 def match_sent_profile_url(profile_url: str, sent_profiles: list[dict], account_id: str,
                            resolve_url, cache: dict[str, str]) -> list[dict]:
-    """Match member URLs, following redirects only when direct matching fails.
+    """Resolve only the opened recipient, then compare stored URLs locally.
 
     The resolver must raise on blocked/failed requests, never treat a failed
     identity lookup as evidence that a person is outside the sent list.
@@ -66,16 +66,4 @@ def match_sent_profile_url(profile_url: str, sent_profiles: list[dict], account_
         return cache[initial]
 
     observed = canonical(profile_url)
-    current = [p for p in eligible if profile_slug_key(p['linkedin_url']) == observed]
-    if current:
-        return current
-    errors = []
-    for profile in eligible:
-        try:
-            if canonical(profile['linkedin_url']) == observed:
-                return [profile]
-        except Exception as exc:
-            errors.append(exc)
-    if errors:
-        raise RuntimeError('Some sent profile URLs could not be resolved; membership is unverified.') from errors[0]
-    return []
+    return [p for p in eligible if profile_slug_key(p['linkedin_url']) == observed]
