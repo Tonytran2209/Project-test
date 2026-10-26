@@ -27,6 +27,7 @@ class SentOnlyReplyTests(unittest.TestCase):
                        sent_target_from_unverified_message=sent_target_from_unverified_message,
                        verify_sent_message_events=verify_sent_message_events,
                        BETWEEN_CONVERSATIONS_MS=0, logger=MagicMock())
+        self.ns['_messaging_surfaces'] = lambda page: [page]
         for name in ['open_matched_conversation', '_active_thread_profile_key',
                      'load_full_conversation', 'mark_active_thread_as_unread']:
             self.ns[name] = MagicMock()
@@ -82,7 +83,40 @@ class SentOnlyReplyTests(unittest.TestCase):
 
     def test_name_only_without_sent_identity_is_not_saved(self):
         self.ns['_active_thread_profile_key'].return_value = ''
-        self.assertEqual(self.match({'name': 'Josh Lynch', 'thread_url': ''}), [])
+        with self.assertRaisesRegex(RuntimeError, 'identity unresolved'):
+            self.match({'name': 'Josh Lynch', 'thread_url': ''})
+
+    def test_compact_slug_is_a_candidate_but_still_requires_identity(self):
+        self.profile.update(linkedin_url='https://www.linkedin.com/in/joshlynch/', normalized_name='joshlynch')
+        self.ns['_active_thread_profile_key'].return_value = 'joshlynch'
+        self.assertEqual(self.match({'name': 'Josh Lynch', 'thread_url': ''})[0]['sent_profile']['id'], 'sent-1')
+
+    def test_saved_thread_verifies_without_exact_sent_text(self):
+        self.profile['verified_threads'] = ['https://www.linkedin.com/messaging/thread/test']
+        self.ns['_active_thread_profile_key'].return_value = ''
+        result = self.match({'name': 'Changed Name', 'thread_url': 'https://www.linkedin.com/messaging/thread/test/?x=1'})
+        self.assertEqual(result[0]['match_reason'], 'verified_row_or_saved_thread')
+        self.assertEqual(result[0]['sent_profile']['id'], 'sent-1')
+
+    def test_row_member_url_verifies_when_opened_thread_matches(self):
+        self.ns['_active_thread_profile_key'].return_value = ''
+        result = self.match({'name': 'Josh Lynch', 'thread_url': 'https://www.linkedin.com/messaging/thread/test/',
+                             'linkedin_url': self.profile['linkedin_url']})
+        self.assertEqual(result[0]['match_reason'], 'verified_row_or_saved_thread')
+
+    def test_row_identity_cannot_verify_a_different_opened_thread(self):
+        self.ns['_active_thread_profile_key'].return_value = ''
+        with self.assertRaisesRegex(RuntimeError, 'identity unresolved'):
+            self.match({'name': 'Josh Lynch', 'thread_url': 'https://www.linkedin.com/messaging/thread/different/',
+                        'linkedin_url': self.profile['linkedin_url']})
+
+    def test_history_and_unread_restore_use_actual_opened_page(self):
+        owner = MagicMock()
+        owner.url = 'https://www.linkedin.com/messaging/thread/test/?filter=unread'
+        self.ns['_messaging_surfaces'] = lambda page: [page, owner]
+        self.match({'name': 'Josh Lynch', 'thread_url': ''})
+        self.assertIs(self.ns['load_full_conversation'].call_args.args[0], owner)
+        self.assertIs(self.ns['mark_active_thread_as_unread'].call_args.args[0], owner)
 
     def test_exact_own_sent_text_can_verify_missing_profile_link(self):
         self.ns['_active_thread_profile_key'].return_value = ''

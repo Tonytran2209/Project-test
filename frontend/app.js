@@ -7365,7 +7365,9 @@ async function refreshOutreachRepliesAfterScan() {
   if (state.outreachReplyRefreshing || state.outreachRepliesLoading ||
       state.outreachReplySendSubmitting) return;
   state.outreachReplyRefreshing = true;
-  const accountId = state.outreachReplySelectedAccountId;
+  const initialAccountId = state.outreachReplySelectedAccountId;
+  let accountId = initialAccountId;
+  const generation = state.outreachReplyRequestGeneration;
   const previousAccount = state.outreachReplyAccounts.find(
     (account) => account.account_id === accountId
   );
@@ -7378,8 +7380,12 @@ async function refreshOutreachRepliesAfterScan() {
   try {
     const metadataResponse = await fetch("/api/outreach/replies?metadata=1", { cache: "no-store" });
     const metadata = await metadataResponse.json();
-    if (!metadataResponse.ok || !metadata.ok) throw new Error(metadata.error || "Could not refresh replies.");
+    if (!metadataResponse.ok || !metadata.ok) throw new Error(metadata.detail || metadata.error || "Could not refresh replies.");
     const accounts = Array.isArray(metadata.accounts) ? metadata.accounts : [];
+    if (!accounts.some((account) => account.account_id === accountId)) {
+      accountId = accounts.find((account) => Number(account.reply_count || 0) > 0)?.account_id ||
+        accounts[0]?.account_id || null;
+    }
     const nextCount = Number(accounts.find((account) => account.account_id === accountId)?.reply_count || 0);
     const targetCount = Math.max(OUTREACH_REPLY_BATCH_SIZE,
       previouslyLoaded + Math.max(0, nextCount - previousCount));
@@ -7394,7 +7400,7 @@ async function refreshOutreachRepliesAfterScan() {
         });
         const response = await fetch(`/api/outreach/replies?${params}`, { cache: "no-store" });
         const page = await response.json();
-        if (!response.ok || !page.ok) throw new Error(page.error || "Could not refresh conversations.");
+        if (!response.ok || !page.ok) throw new Error(page.detail || page.error || "Could not refresh conversations.");
         const rows = Array.isArray(page.replies) ? page.replies : [];
         refreshed.push(...rows);
         hasMore = Boolean(page.has_more);
@@ -7402,9 +7408,11 @@ async function refreshOutreachRepliesAfterScan() {
       }
     }
     if (document.querySelector("#tab-replies")?.hidden ||
-        accountId !== state.outreachReplySelectedAccountId) return;
+        initialAccountId !== state.outreachReplySelectedAccountId ||
+        generation !== state.outreachReplyRequestGeneration) return;
 
     ++state.outreachReplyRequestGeneration;
+    state.outreachReplySelectedAccountId = accountId;
     state.outreachReplyAccounts = accounts;
     state.outreachReplies = refreshed;
     state.outreachReplyNextOffsetByAccount = { [accountId]: refreshed.length };
@@ -7413,8 +7421,13 @@ async function refreshOutreachRepliesAfterScan() {
     state.outreachReplyLoadingMoreByAccount = {};
     state.outreachReplyLoadErrorByAccount = {};
     state.outreachReplyRevision = metadata.revision ?? null;
+    if (els.outreachReplyError) {
+      els.outreachReplyError.hidden = true;
+      els.outreachReplyError.textContent = "";
+    }
     renderOutreachReplies();
-    if (inputFocused && selectedId === state.outreachReplySelectedIdByAccount[accountId]) {
+    if (inputFocused && accountId === initialAccountId &&
+        selectedId === state.outreachReplySelectedIdByAccount[accountId]) {
       const input = els.outreachReplyConversation?.querySelector("#outreachReplyInlineInput");
       if (input) {
         input.focus();
@@ -7423,6 +7436,11 @@ async function refreshOutreachRepliesAfterScan() {
     }
   } catch (error) {
     console.error("Reply refresh error:", error);
+    if (initialAccountId === state.outreachReplySelectedAccountId &&
+        generation === state.outreachReplyRequestGeneration && els.outreachReplyError) {
+      els.outreachReplyError.textContent = error.message || "Could not refresh replies.";
+      els.outreachReplyError.hidden = false;
+    }
   } finally {
     state.outreachReplyRefreshing = false;
   }

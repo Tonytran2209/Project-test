@@ -177,7 +177,8 @@ def _is_selected(locator: Locator) -> bool:
 
 def _surface_has_unread(surface: Page | Frame) -> bool:
     try:
-        return surface.locator(UNREAD_SELECTOR).count() > 0
+        candidates = surface.locator(UNREAD_SELECTOR)
+        return any(_is_visible(candidates.nth(index)) for index in range(candidates.count()))
     except Exception:
         return False
 
@@ -344,6 +345,35 @@ def load_sent_message_profiles(
         if len(rows) < page_size:
             break
         offset += page_size
+
+    # Reuse previously verified target/thread links, never a name-only link.
+    by_id = {str(profile["id"]): profile for profile in sent_profiles}
+    if by_id:
+        offset = 0
+        while True:
+            try:
+                history = (active_client.table("outreach_reply_messages")
+                           .select("sent_target_id,thread_url,user_name,linkedin_url")
+                           .eq("assigned_account_id", str(account_id).strip())
+                           .order("id").range(offset, offset + page_size - 1).execute().data or [])
+            except Exception as exc:
+                logger.warning("Reply identity cache unavailable; using live profile verification: %s", exc)
+                break
+            for reply in history:
+                profile = by_id.get(str(reply.get("sent_target_id") or ""))
+                if not profile:
+                    continue
+                key = profile_slug_key(reply.get("linkedin_url"))
+                if not key or key != profile_slug_key(profile.get("linkedin_url")):
+                    continue
+                thread = str(reply.get("thread_url") or "").split("?", 1)[0].rstrip("/")
+                if thread:
+                    profile.setdefault("verified_threads", []).append(thread)
+                if reply.get("user_name"):
+                    profile.setdefault("verified_names", []).append(_normalize_name(reply["user_name"]))
+            if len(history) < page_size:
+                break
+            offset += page_size
 
     logger.info(
         (
@@ -590,9 +620,10 @@ def scan_unread_names(page: Page) -> list[dict]:
     return threads
 
 
-def _active_thread_profile_key(page: Page) -> str:
-    """Use only a unique member link inside the opened message thread."""
+def _active_thread_profile_key(page: Page, unread_name: str = "") -> str:
+    """Prefer recipient-named links; own-author links must not cause ambiguity."""
     surface = _find_unread_surface(page) or page
+    scopes_to_check = []
     for selector in (
         ".msg-thread__content",
         ".msg-thread",
@@ -600,24 +631,40 @@ def _active_thread_profile_key(page: Page) -> str:
     ):
         try:
             scopes = surface.locator(selector)
-            for index in range(scopes.count()):
-                scope = scopes.nth(index)
-                if not _is_visible(scope):
-                    continue
-                anchors = scope.locator('a[href*="/in/"]')
-                keys = {
-                    key
-                    for anchor_index in range(anchors.count())
-                    if (key := profile_slug_key(
-                        anchors.nth(anchor_index).get_attribute("href")
-                    ))
-                }
-                if len(keys) == 1:
-                    return next(iter(keys))
-                if len(keys) > 1:
-                    return ""
+            scopes_to_check.extend(scopes.nth(index) for index in range(scopes.count()))
         except Exception:
             continue
+    # Existing message-list selectors also locate author links in newer layouts.
+    for selector in MESSAGE_SCROLL_CONTAINER_SELECTORS:
+        try:
+            scopes = surface.locator(selector)
+            scopes_to_check.extend(scopes.nth(index).locator("xpath=..") for index in range(scopes.count()))
+        except Exception:
+            continue
+    named_keys, all_keys = set(), set()
+    for scope in scopes_to_check:
+        try:
+            if _is_visible(scope):
+                for anchor in scope.locator('a[href*="/in/"]').all():
+                    if not _is_visible(anchor):
+                        continue
+                    key = profile_slug_key(anchor.get_attribute("href"))
+                    if not key:
+                        continue
+                    all_keys.add(key)
+                    labels = [anchor.inner_text(), anchor.get_attribute("aria-label") or ""]
+                    for label in labels:
+                        label = re.sub(r"^view\s+(.+?)(?:['’]s)?\s+profile$", r"\1", label.strip(), flags=re.I)
+                        if unread_name and same_person_name(_normalize_name(label), _normalize_name(unread_name)):
+                            named_keys.add(key)
+        except Exception:
+            continue
+    logger.info("THREAD IDENTITY EVIDENCE | named_member_links=%s | distinct_member_links=%s",
+                len(named_keys), len(all_keys))
+    if len(named_keys) == 1:
+        return next(iter(named_keys))
+    if not unread_name and len(all_keys) == 1:
+        return next(iter(all_keys))
     return ""
 
 
@@ -635,10 +682,17 @@ def sent_candidates_for_unread_thread(thread: dict, sent_profiles: list[dict], a
     key = profile_slug_key(thread.get("linkedin_url"))
     if key:
         return [profile for profile in profiles if profile_slug_key(profile.get("linkedin_url")) == key]
+    thread_url = str(thread.get("thread_url") or "").split("?", 1)[0].rstrip("/")
+    linked = [profile for profile in profiles if thread_url and thread_url in profile.get("verified_threads", [])]
+    if linked:
+        return linked
     name = _normalize_name(thread.get("name") or "")
     return [profile for profile in profiles
-            if same_person_name(name, profile.get("normalized_name") or
-                                _profile_name_from_linkedin_url(profile.get("linkedin_url")))]
+            if any(same_person_name(name, candidate) or
+                   (len(name.split()) >= 2 and name.replace(" ", "") == candidate.replace(" ", ""))
+                   for candidate in [profile.get("normalized_name") or
+                                     _profile_name_from_linkedin_url(profile.get("linkedin_url")),
+                                     *profile.get("verified_names", [])])]
 
 
 def match_unread_by_profile_url(
@@ -665,12 +719,18 @@ def match_unread_by_profile_url(
             continue
         normalized_name = _normalize_name(unread_name)
         opened = False
+        conversation_page = page
         try:
             thread_url = open_matched_conversation(
                 page, unread_name, unread_thread["thread_url"]
             )
             opened = True
-            profile_key = _active_thread_profile_key(page)
+            # Opening/recovering Messaging can select another live browser tab.
+            for candidate_page in _messaging_surfaces(page):
+                if str(candidate_page.url).split("?", 1)[0].rstrip("/") == thread_url.rstrip("/"):
+                    conversation_page = candidate_page
+                    break
+            profile_key = _active_thread_profile_key(conversation_page, unread_name)
             profile_url = (
                 f"https://www.linkedin.com/in/{profile_key}/" if profile_key else ""
             )
@@ -683,8 +743,18 @@ def match_unread_by_profile_url(
                             account_id, unread_name)
                 continue
             match_reason = "exact_thread_profile_url"
+            if not candidates:
+                row_key = profile_slug_key(unread_thread.get("linkedin_url"))
+                captured_thread = str(thread_url).split("?", 1)[0].rstrip("/")
+                expected_thread = str(unread_thread.get("thread_url") or "").split("?", 1)[0].rstrip("/")
+                candidates = [profile for profile in eligible
+                              if (row_key and expected_thread and expected_thread == captured_thread
+                                  and row_key == profile_slug_key(profile.get("linkedin_url")))
+                              or captured_thread in profile.get("verified_threads", [])]
+                if candidates:
+                    match_reason = "verified_row_or_saved_thread"
             conversation_events = load_full_conversation(
-                page, unread_name, account_id=account_id,
+                conversation_page, unread_name, account_id=account_id,
                 sent_message_text=str(candidates[0].get("message_text") or "")
                 if candidates else "",
             )
@@ -703,9 +773,8 @@ def match_unread_by_profile_url(
                         candidates = [unverified_text_match]
                         match_reason = "unique_recipient_and_exact_sent_message"
             if not candidates:
-                logger.info("UNREAD SKIPPED | account=%s | name=%s | reason=sent_identity_unverified",
-                            account_id, unread_name)
-                continue
+                raise RuntimeError(f"Sent-list conversation identity unresolved for {unread_name!r}; "
+                                   "keeping the previous Replies snapshot instead of silently dropping it.")
             verify_sent_message_events(
                 conversation_events, str(candidates[0].get("message_text") or ""),
             )
@@ -728,8 +797,8 @@ def match_unread_by_profile_url(
                 )
         finally:
             if opened:
-                mark_active_thread_as_unread(page, unread_name)
-                page.wait_for_timeout(BETWEEN_CONVERSATIONS_MS)
+                mark_active_thread_as_unread(conversation_page, unread_name)
+                conversation_page.wait_for_timeout(BETWEEN_CONVERSATIONS_MS)
     return matched_profiles
 
 
@@ -784,14 +853,30 @@ def _scroll_unread_list_to_start(surface: Page | Frame) -> None:
         pass
 
 
+def _recover_unread_surface(page: Page) -> Page | Frame:
+    """Reacquire live UI after rerenders; reopen Messaging/Unread only if needed."""
+    for _ in range(8):
+        surface = _find_unread_surface(page)
+        if surface is not None:
+            return surface
+        page.wait_for_timeout(250)
+    logger.info("UNREAD SURFACE RECOVERY | reopening Messaging and selecting Unread")
+    owner = open_messaging(page)
+    open_unread(owner)
+    surface = _find_unread_surface(owner)
+    if surface is None:
+        _log_unread_diagnostics(owner)
+        raise RuntimeError("Unread surface could not be recovered before row click.")
+    return surface
+
+
 def open_matched_conversation(
     page: Page, unread_name: str, thread_url: str = "",
 ) -> str:
     """Click the captured Unread box and verify its conversation opened."""
 
-    surface = _find_unread_surface(page)
-    if surface is None:
-        raise RuntimeError("Unread surface was not found before row click.")
+    surface = _recover_unread_surface(page)
+    page = surface if isinstance(surface, Page) else surface.page
 
     _scroll_unread_list_to_start(surface)
     page.wait_for_timeout(400)
@@ -799,6 +884,13 @@ def open_matched_conversation(
     bottom_passes = 0
 
     for _ in range(45):
+        # Do not retain a detached frame/list across conversation navigation.
+        current_surface = _find_unread_surface(page)
+        if current_surface is None:
+            current_surface = _recover_unread_surface(page)
+            _scroll_unread_list_to_start(current_surface)
+        surface = current_surface
+        page = surface if isinstance(surface, Page) else surface.page
         row = _find_visible_unread_row(surface, unread_name, thread_url)
         name_locator = _find_visible_unread_name(surface, unread_name) if not thread_url else None
         if row is not None or name_locator is not None:

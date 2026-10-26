@@ -9,10 +9,23 @@ every 30 seconds while the tab is open, updating the selected chat when it chang
 The worker retains the original sent target, campaign and batch context.
 Other Unread conversations are skipped before opening or reading their history;
 they are not scan failures. A member URL on the list row is preferred; otherwise
-an exact normalized recipient-name match permits opening for identity verification.
-An opened member URL or unique sent-message evidence is still required to save.
-If the stored URL has no recognizable name and the row exposes no member URL,
-the entry is conservatively skipped instead of guessed from a fuzzy name match.
+a normalized recipient-name or compact full-name slug permits opening for
+identity verification (not saving by name alone). Previously saved target/thread
+links can also be reused, only for the same account and matching profile URL.
+Recipient-named profile links in the active conversation take precedence over
+own-author links, so a thread containing both participants' URLs is not rejected
+merely for having multiple URLs. A captured row member URL is trusted only when
+its captured thread URL matches the opened thread. No exact message-text match is
+required when URL/thread identity is verified. An eligible thread whose identity
+is still unresolved fails conservatively, preserving the previous snapshot
+instead of silently dropping the conversation. Message-role rules are unchanged.
+If no candidate identity exists, the entry is skipped rather than fuzzy-matched.
+
+Before each click, the worker reacquires the live Unread surface. Transient
+rerenders are retried; persistent missing filters reopen Messaging and select
+Unread again. History is read from the page that actually owns the opened thread.
+The dashboard reloads a valid account after metadata recovery and displays API
+refresh errors without discarding the previous conversations.
 It reads overlapping history windows from newest to oldest, classifies each
 message as own, incoming, or unknown, and never treats shared message text as
 sender proof. If the Unread list or an eligible conversation's history cannot be
