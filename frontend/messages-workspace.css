@@ -1,4 +1,10 @@
 /* Messages follows the light, full-width Acceptance and Recipients workspaces. */
+.message-workspace-header { padding:28px 32px 0; }
+.message-workspace-header h3 { margin:0 0 16px; color:#252521; font-size:22px; font-weight:650; letter-spacing:-.035em; }
+#tab-outreach #outreachAcceptedPoolPanel[hidden], #tab-outreach #messageBatchesPanel[hidden] { display:none !important; }
+#tab-outreach .message-batch-send-button[hidden] { display:none !important; }
+@media (max-width:620px) { .message-workspace-header { padding:20px 18px 0; } }
+
 #appMainScroll:has(#tab-outreach:not([hidden]) [data-outreach-process-panel="messages"].is-active) {
   padding: 0 !important;
   background: #fff;

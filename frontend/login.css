@@ -28,10 +28,9 @@ body.login-mode { margin: 0; background: #f6f5f4; color: #37352f; color-scheme: 
 .login-node-icon.sky { background: #dcecfa; color: #005bab; }
 .login-node-icon.yellow { background: #fef7d6; color: #793400; }
 .login-node-connect { top: 8%; left: 0; transform: translateY(-50%); }
-.login-node-accept { top: 29%; right: 0; transform: translateY(-50%); }
-.login-node-recipients { top: 50%; left: 0; transform: translateY(-50%); }
-.login-node-message { top: 71%; right: 0; transform: translateY(-50%); }
-.login-node-reply { top: 92%; left: 0; transform: translateY(-50%); }
+.login-node-accept { top: 36%; right: 0; transform: translateY(-50%); }
+.login-node-message { top: 64%; left: 0; transform: translateY(-50%); }
+.login-node-reply { top: 92%; right: 0; transform: translateY(-50%); }
 .login-connections { height: 100%; }
 .login-connections .login-flow-highlight { animation: login-flow-highlight 2.8s linear infinite; }
 .login-connections circle { transform-box: fill-box; transform-origin: center; animation: login-pulse 2.8s ease-in-out infinite; }

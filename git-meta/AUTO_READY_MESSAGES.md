@@ -52,8 +52,7 @@ deleted; original Connect jobs, acceptance records, prospects, and campaign data
 are retained. No notification-only dismissal is offered.
 
 Source recipients are marked `auto_message_dismissed` so later scans do not
-silently recreate deleted drafts. They can still be prepared manually from
-Recipients. The deletion is permanent for those draft snapshots; recovery requires
+silently recreate deleted drafts. The deletion is permanent for those draft snapshots; recovery requires
 a database backup. Preparation of other newly accepted recipients is unaffected.
 
 ## Diagnostics
@@ -65,3 +64,14 @@ grep -E 'MESSAGES READY|Auto prepare' logs/acceptance.out.log logs/acceptance.er
 Missing SQL/schema permissions produce visible notification API errors and worker
 preparation errors with retry. Acceptance results are still saved. This migration
 must be applied before using the new UI; it is not applied automatically by git.
+
+## Unified Messages workspace
+
+Recipients is no longer a separate tab. Messages has one list; Needs info, Ready,
+Queued, Sending, Completed and Failed are status badges on its rows, not tabs.
+Needs info groups accepted recipients not yet automatically prepared by original
+Connect batch. There are no manual Prepare buttons or recipient
+selection controls. Preparation still runs after each Acceptance check batch and
+retries during idle periods. A legacy `recipients` navigation request opens the
+merged workspace. The bell opens the matching batch's drawer in that same list.
+This presentation merge requires no additional SQL beyond the migration above.

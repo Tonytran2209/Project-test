@@ -269,20 +269,6 @@ const els = {
 
   outreachAcceptanceEmpty:
     document.querySelector("#outreachAcceptanceEmpty"),
-  outreachAcceptanceCampaignSummary:
-    document.querySelector("#outreachAcceptanceCampaignSummary"),
-  outreachAcceptanceCampaignSummaryName:
-    document.querySelector("#outreachAcceptanceCampaignSummaryName"),
-  outreachAcceptanceCampaignSummaryBatches:
-    document.querySelector("#outreachAcceptanceCampaignSummaryBatches"),
-  outreachAcceptanceCampaignSummaryProspects:
-    document.querySelector("#outreachAcceptanceCampaignSummaryProspects"),
-  outreachAcceptanceCampaignSummaryAccepted:
-    document.querySelector("#outreachAcceptanceCampaignSummaryAccepted"),
-  outreachAcceptanceCampaignSummaryPending:
-    document.querySelector("#outreachAcceptanceCampaignSummaryPending"),
-  outreachAcceptanceCampaignSummaryFailed:
-    document.querySelector("#outreachAcceptanceCampaignSummaryFailed"),
 
   outreachAcceptanceTableWrap:
     document.querySelector("#outreachAcceptanceTableWrap"),
@@ -638,7 +624,7 @@ const state = {
     },
     items: []
   },
-  outreachAcceptedPoolFilter: "all",
+  outreachAcceptedPoolFilter: "ready",
   outreachAcceptedCampaignId: "",
   outreachAcceptedPoolWeekKey: null,
   outreachAcceptanceWeekKey: null,
@@ -3186,38 +3172,12 @@ function renderAcceptancePeriodFilters() {
 
 }
 
-function renderAcceptanceCampaignSummary(rows) {
-  const visible = Boolean(state.outreachAcceptanceCampaign) && rows.length > 0;
-  const summary = els.outreachAcceptanceCampaignSummary;
-  if (!summary) return;
-  summary.hidden = !visible;
-  if (!visible) return;
-
-  const totals = rows.reduce((result, job) => {
-    const acceptance = job.acceptance || {};
-    result.prospects += Number(job.input_count || 0);
-    result.accepted += getAcceptanceAcceptedCount(acceptance);
-    result.pending += Number(acceptance.still_pending_count || 0);
-    result.failed += Number(acceptance.failed_count || 0);
-    return result;
-  }, { prospects: 0, accepted: 0, pending: 0, failed: 0 });
-  const setText = (element, text) => { if (element) element.textContent = String(text); };
-  setText(els.outreachAcceptanceCampaignSummaryName, state.outreachAcceptanceCampaign);
-  setText(els.outreachAcceptanceCampaignSummaryBatches, `${rows.length} ${rows.length === 1 ? "batch" : "batches"}`);
-  setText(els.outreachAcceptanceCampaignSummaryProspects, totals.prospects);
-  setText(els.outreachAcceptanceCampaignSummaryAccepted, totals.accepted);
-  setText(els.outreachAcceptanceCampaignSummaryPending, totals.pending);
-  setText(els.outreachAcceptanceCampaignSummaryFailed, totals.failed);
-}
-
-
 function renderOutreachAcceptanceJobs(
   jobs
 ) {
   renderAcceptancePeriodFilters();
 
   const rows = getAcceptancePeriodRows(jobs);
-  renderAcceptanceCampaignSummary(rows);
   updateAcceptanceDeleteSelectionUi();
 
   if (
@@ -4424,7 +4384,7 @@ function renderOutreachAcceptedPool() {
       const allSelected = readyIds.length > 0 && readyIds.every((id) =>
         state.outreachAcceptedSelectedProspectIds.has(id));
       if (name) name.textContent = acceptedPoolCampaignName(item);
-      if (count) count.textContent = `${group?.count || 0} recipients · ${readyIds.length} ready`;
+      if (count) count.textContent = `${readyIds.length} pending`;
       if (selectAll) {
         selectAll.disabled = !readyIds.length || state.messagePreparationSubmitting ||
           state.messagePreparationSelectedSubmitting;
@@ -4670,7 +4630,7 @@ function renderOutreachAcceptedPool() {
           ? "Sent"
           : uiBucket === "prepared"
             ? "Prepared"
-            : "Ready";
+            : "Needs info";
 
       message.textContent =
         messageLabel;
@@ -4956,11 +4916,7 @@ function renderMessageBatchSourceFilter() {
   const sourcesById =
     new Map();
 
-  (
-    Array.isArray(state.messageBatches)
-      ? state.messageBatches
-      : []
-  ).forEach((batch) => {
+  getMessageWorkspaceRows().forEach((batch) => {
     getMessageBatchSourceConnectIds(
       batch
     ).forEach((source) => {
@@ -5059,11 +5015,28 @@ function renderMessageBatchSourceFilter() {
 }
 
 
+function getMessageWorkspaceRows() {
+  const rows = Array.isArray(state.messageBatches) ? [...state.messageBatches] : [];
+  const eligible = new Set((state.messagePreparation?.items || []).map(item => String(item.prospect_id)));
+  const groups = new Map();
+  for (const item of state.outreachAcceptedPool?.items || []) {
+    if (!eligible.has(String(item.prospect_id)) || !item.connect_batch_id) continue;
+    const key = String(item.connect_batch_id);
+    if (!groups.has(key)) groups.set(key, {
+      id: `needs-info:${key}`, status: "needs_info", batch_code: item.batch_label || item.job_code || key,
+      created_at: item.accepted_at || item.job_created_at, target_count: 0, targets: [],
+      source_connect_ids: [{id: key, batch_label: item.batch_label, display_name: item.campaign_name || item.display_name,
+        code: item.job_code}],
+    });
+    const group = groups.get(key);
+    group.targets.push(item);
+    group.target_count += 1;
+  }
+  return rows.concat([...groups.values()]).sort((a,b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+}
+
 function getFilteredMessageBatches() {
-  const batches =
-    Array.isArray(state.messageBatches)
-      ? state.messageBatches
-      : [];
+  const batches = getMessageWorkspaceRows();
 
   if (!state.messageBatchWeekKey) {
     return [];
@@ -5106,10 +5079,7 @@ function getFilteredMessageBatches() {
 function getMessageBatchWeekGroups() {
   const groups = new Map();
 
-  (Array.isArray(state.messageBatches)
-    ? state.messageBatches
-    : []
-  ).forEach((batch) => {
+  getMessageWorkspaceRows().forEach((batch) => {
     const info = getWeekInfo(
       batch?.created_at ||
       batch?.prepared_at ||
@@ -5290,10 +5260,7 @@ function renderMessagePreparation() {
   renderMessageBatchWeekList();
   renderMessageBatchSourceFilter();
 
-  const allBatches =
-    Array.isArray(state.messageBatches)
-      ? state.messageBatches
-      : [];
+  const allBatches = getMessageWorkspaceRows();
 
   const batches =
     getFilteredMessageBatches();
@@ -5314,10 +5281,10 @@ function renderMessagePreparation() {
     if (!batches.length) {
       els.messageBatchEmpty.textContent =
         state.messageBatchWeekKey
-          ? "No prepared batches match this week."
+          ? "No batches match this week."
           : allBatches.length
             ? "Select a week to view message batches."
-            : "No prepared batches yet.";
+            : "No message batches yet.";
     }
   }
 
@@ -5463,7 +5430,7 @@ function renderMessagePreparation() {
 
     if (status) {
       status.textContent =
-        batchStatus;
+        ({needs_info: "Needs info", prepared: "Ready", queued: "Queued", processing: "Sending", completed: "Completed", failed: "Failed"})[batchStatus] || batchStatus;
       status.dataset.status = batchStatus;
     }
 
@@ -5475,7 +5442,7 @@ function renderMessagePreparation() {
         "click",
         () => {
           openPreparedMessageBatch(
-            batchId
+            batchId, batchStatus === "needs_info" ? batch : null
           );
         }
       );
@@ -5487,6 +5454,7 @@ function renderMessagePreparation() {
 
       sendButton.disabled =
         !canSend;
+      sendButton.hidden = batchStatus === "needs_info";
 
       sendButton.textContent =
         getMessageBatchSendLabel(
@@ -5863,12 +5831,14 @@ async function queueMessageBatchForSending(
 }
 
 
-async function openPreparedMessageBatch(batchId) {
+async function openPreparedMessageBatch(batchId, localBatch = null) {
   if (!batchId) {
     return;
   }
 
   try {
+    let batch = localBatch;
+    if (!batch) {
     const response = await fetch(
       `/api/outreach/messages/batches/${encodeURIComponent(batchId)}`,
       {
@@ -5890,7 +5860,8 @@ async function openPreparedMessageBatch(batchId) {
       );
     }
 
-    const batch = result.batch || {};
+    batch = result.batch || {};
+    }
     const targets =
       Array.isArray(batch.targets)
         ? batch.targets
@@ -5927,7 +5898,7 @@ async function openPreparedMessageBatch(batchId) {
                   >
                     ${escapeHtml(target.linkedin_url || "—")}
                   </a>
-                  <p class="panel-meta">Company: ${escapeHtml(target.company_name || "Not saved")}</p>
+                  ${batch.status === "needs_info" ? "" : `<p class="panel-meta">Company: ${escapeHtml(target.company_name || "Not saved")}</p>`}
                   ${target.message_text ? `<p class="ready-draft-preview">${escapeHtml(target.message_text)}</p>` : ""}
                   </div>
                 </div>
@@ -6132,6 +6103,7 @@ async function prepareSelectedMessageRecipients(
     ]);
 
     renderOutreachAcceptedPool();
+    focusPreparedMessageResult(result);
 
   } catch (error) {
     if (els.messagePrepareConfirmError) {
@@ -6232,6 +6204,7 @@ async function prepareAllMessageRecipients(
     ]);
 
     renderOutreachAcceptedPool();
+    focusPreparedMessageResult(result);
 
   } catch (error) {
     if (els.messagePrepareConfirmError) {
@@ -7742,13 +7715,11 @@ function switchTab(tabName) {
       title: {
         connect: "Connect",
         acceptance: "Acceptance",
-        recipients: "Recipients",
         messages: "Messages"
       }[state.outreachProcessTab] || "Connect",
       subtitle: {
         connect: "Send connection requests to LinkedIn profiles.",
         acceptance: "Check which connections were accepted.",
-        recipients: "Prepare the people you want to message.",
         messages: "Create and follow up on your messages."
       }[state.outreachProcessTab] || "Send connection requests to LinkedIn profiles."
     },
@@ -7926,19 +7897,27 @@ if (draggableWorkflowNavigation) {
   });
 }
 
+function focusPreparedMessageResult(result) {
+  if (!result.created) return;
+  const batch = result.batch || result.batches?.[0];
+  const week = getWeekInfo(batch?.created_at);
+  if (week) state.messageBatchWeekKey = week.key;
+  state.messageBatchSourceFilter = "all";
+  renderMessagePreparation();
+}
+
 function setOutreachProcessTab(
   tabName
 ) {
   const validTabs = new Set([
     "connect",
     "acceptance",
-    "recipients",
     "messages"
   ]);
 
   const requested =
     String(
-      tabName || "connect"
+      tabName === "recipients" ? "messages" : tabName || "connect"
     ).trim();
 
   const cleaned =
@@ -7958,7 +7937,6 @@ function setOutreachProcessTab(
     const headings = {
       connect: ["Connect", "Send connection requests to LinkedIn profiles."],
       acceptance: ["Acceptance", "Check which connections were accepted."],
-      recipients: ["Recipients", "Prepare the people you want to message."],
       messages: ["Messages", "Create and follow up on your messages."]
     };
     if (els.pageTitle) els.pageTitle.textContent = headings[cleaned][0];
@@ -8009,18 +7987,12 @@ function setOutreachProcessTab(
 
   requestAnimationFrame(syncOutreachWorkflowPill);
 
-  if (cleaned === "recipients") {
-    void Promise.all([
-      loadOutreachAcceptedPool(),
-      loadMessagePreparation()
-    ]).then(() => renderOutreachAcceptedPool());
-  }
-
   if (cleaned === "messages") {
     void Promise.all([
+      loadOutreachAcceptedPool(),
       loadMessagePreparation(),
       loadMessageBatches()
-    ]);
+    ]).then(() => renderMessagePreparation());
   }
 }
 
@@ -9162,7 +9134,8 @@ window.outreachReadyNavigation = async (batchId) => {
   if (await openPreparedMessageBatch(batchId) === false) throw new Error("Could not open Ready batch.");
 };
 window.addEventListener("outreach-ready-updated", () => {
-  void loadMessageBatches().then(() => renderMessagePreparation());
+  void Promise.all([loadOutreachAcceptedPool(), loadMessagePreparation(), loadMessageBatches()])
+    .then(() => { renderOutreachAcceptedPool(); renderMessagePreparation(); });
 });
 void loadWorkerActivity();
 window.setInterval(() => {

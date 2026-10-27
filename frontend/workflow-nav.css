@@ -17,7 +17,7 @@
   width: min(520px, calc(100vw - var(--sidebar-width) - 32px)) !important;
   max-width: none !important;
   min-height: 46px !important;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   gap: 3px !important;
   margin: 0 !important;
   padding: 4px !important;
@@ -35,7 +35,7 @@
   top: 4px;
   bottom: 4px;
   left: var(--workflow-pill-left, 4px);
-  width: var(--workflow-pill-width, calc((100% - 20px) / 5));
+  width: var(--workflow-pill-width, calc((100% - 20px) / 4));
   border-radius: 9px;
   background: #292929;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
@@ -168,7 +168,7 @@
   width: min(520px, calc(100vw - var(--sidebar-width) - 32px)) !important;
   max-width: none !important;
   min-height: 46px !important;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   gap: 3px !important;
   margin: 0 !important;
   padding: 4px !important;
@@ -185,7 +185,7 @@
   top: 4px;
   bottom: 4px;
   left: var(--workflow-pill-left, 4px);
-  width: var(--workflow-pill-width, calc((100% - 20px) / 5));
+  width: var(--workflow-pill-width, calc((100% - 20px) / 4));
   border-radius: 9px;
   background: #292929;
   box-shadow: 0 2px 6px rgba(0, 0, 0, .18);
@@ -233,7 +233,7 @@
   width: min(520px, calc(100vw - var(--sidebar-width) - 32px)) !important;
   max-width: none !important;
   min-height: 46px !important;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   gap: 3px !important;
   margin: 0 !important;
   padding: 4px !important;
@@ -262,7 +262,7 @@
   top: 4px;
   bottom: 4px;
   left: var(--workflow-pill-left, 4px);
-  width: var(--workflow-pill-width, calc((100% - 20px) / 5));
+  width: var(--workflow-pill-width, calc((100% - 20px) / 4));
   border-radius: 9px;
   background: #292929;
   box-shadow: 0 2px 6px rgba(0, 0, 0, .18);

@@ -12,7 +12,7 @@ The dashboard is a product surface, not a marketing landing page. Use atmospheri
 Primary UX goals:
 
 - Make the next safe action obvious.
-- Keep Connect → Acceptance → Recipients → Messages visible as one workflow.
+- Keep Connect → Acceptance → Messages visible as one workflow; recipient preparation is automatic.
 - Make status, errors, quotas, and disabled states scannable without opening a detail view.
 - Preserve context while filtering, paging, opening drawers, or reviewing a prepared batch.
 - Work comfortably with keyboard, touch, and narrow screens.
@@ -86,12 +86,12 @@ The base spacing unit is 8px: 2, 4, 8, 12, 16, 24, 32, and 64px. Use 24px panel 
 
 Desktop uses a fixed 248px navigation rail and a fluid content area. The topbar stays visible while the user scrolls and contains page context, system state, and the refresh action. Main content should use a comfortable maximum width and avoid stretching dense tables across unreadable line lengths.
 
-The Outreach area is one workspace with four process tabs:
+The Outreach area is one workspace with three process tabs and a Replies inbox:
 
 1. **Connect** — enter URLs, review targets, start a Connect job, and monitor progress.
 2. **Acceptance** — queue and inspect acceptance checks and history.
-3. **Recipients** — filter accepted profiles and prepare a message batch.
-4. **Messages** — review a prepared snapshot and queue it for sending.
+3. **Messages** — one list of automatically prepared message batches and recipients needing information. Needs info, Ready, Queued, Sending, Completed and Failed are row status badges, not tabs. Users review a draft and queue it for sending; there is no manual Prepare step.
+4. **Replies** — review and respond to captured incoming conversations.
 
 Historical data uses a week-first index across Acceptance, Recipients, and Messages. The default view shows dated week cards with lightweight totals; selecting a week reveals only the Connect Jobs, accepted profiles, or message batches belonging to that week. Batch-level filters remain available after a week is selected, but a default dropdown must never be the primary navigation for historical data.
 

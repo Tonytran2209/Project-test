@@ -53,45 +53,6 @@
   font-size: 13px;
 }
 
-#tab-outreach [data-outreach-process-panel="acceptance"] .acceptance-campaign-summary {
-  margin: 0 0 16px;
-  padding: 14px 16px;
-  border: 1px solid #e5e5e1;
-  border-radius: 10px;
-  background: #fafaf9;
-}
-
-#tab-outreach [data-outreach-process-panel="acceptance"] .acceptance-campaign-summary[hidden] {
-  display: none !important;
-}
-
-.acceptance-campaign-summary-heading,
-.acceptance-campaign-summary-heading > div {
-  display: flex;
-  align-items: center;
-}
-
-.acceptance-campaign-summary-heading {
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.acceptance-campaign-summary-heading > div {
-  min-width: 0;
-  align-items: baseline;
-  gap: 9px;
-  flex-wrap: wrap;
-}
-
-.acceptance-campaign-summary-heading strong { color: #37352f; font-size: 14px; font-weight: 650; }
-.acceptance-campaign-summary-heading > div > span { color: #858580; font-size: 11px; }
-.acceptance-campaign-summary-heading > span { flex: 0 0 auto; color: #77766f; font-size: 11px; }
-.acceptance-campaign-summary-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.acceptance-campaign-summary-metrics > div { display: grid; gap: 4px; padding: 9px 10px; border: 1px solid #e9e9e7; border-radius: 7px; background: #fff; }
-.acceptance-campaign-summary-metrics span { color: #858580; font-size: 11px; }
-.acceptance-campaign-summary-metrics strong { color: #37352f; font-size: 15px; font-weight: 650; }
-
 #tab-outreach [data-outreach-process-panel="acceptance"] .outreach-list-pagination,
 #tab-outreach [data-outreach-process-panel="acceptance"] .panel-meta {
   color: #858580;
@@ -554,8 +515,6 @@
     min-width: 130px;
     flex: 1 1 150px;
   }
-
-  .acceptance-campaign-summary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   #tab-outreach [data-outreach-process-panel="acceptance"] .acceptance-week-button {
     gap: 5px;

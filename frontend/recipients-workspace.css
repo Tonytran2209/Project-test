@@ -1,10 +1,10 @@
 /* Match the Acceptance workspace while keeping Recipients controls and data intact. */
-#appMainScroll:has(#tab-outreach:not([hidden]) [data-outreach-process-panel="recipients"].is-active) {
+#appMainScroll:has(#tab-outreach:not([hidden]) [data-outreach-process-panel="messages"].is-active) {
   padding: 0 !important;
   background: #fff;
 }
 
-#tab-outreach:has([data-outreach-process-panel="recipients"].is-active) {
+#tab-outreach:has([data-outreach-process-panel="messages"].is-active) {
   width: 100% !important;
   max-width: none !important;
   min-height: 100%;
@@ -13,7 +13,7 @@
   background: #fff;
 }
 
-#tab-outreach [data-outreach-process-panel="recipients"] {
+#tab-outreach [data-outreach-process-panel="messages"] {
   --stripe-border: #e8e8e5;
   --stripe-border-strong: #dcdcd7;
   --stripe-text: #37352f;
@@ -27,7 +27,7 @@
   color: #37352f;
 }
 
-#tab-outreach [data-outreach-process-panel="recipients"] #outreachAcceptedPoolPanel {
+#tab-outreach [data-outreach-process-panel="messages"] #outreachAcceptedPoolPanel {
   display: grid !important;
   min-width: 0;
   padding: 28px 32px 110px !important;
@@ -318,11 +318,10 @@
   background: #fbfbfa;
 }
 
-#outreachAcceptedPoolPanel .outreach-accepted-pool-table th:nth-child(1) { width: 52px; }
-#outreachAcceptedPoolPanel .outreach-accepted-pool-table th:nth-child(2) { width: 34%; }
-#outreachAcceptedPoolPanel .outreach-accepted-pool-table th:nth-child(3) { width: 13%; }
+#outreachAcceptedPoolPanel .outreach-accepted-pool-table th:nth-child(1) { width: 34%; }
+#outreachAcceptedPoolPanel .outreach-accepted-pool-table th:nth-child(2) { width: 13%; }
+#outreachAcceptedPoolPanel .outreach-accepted-pool-table th:nth-child(3) { width: 19%; }
 #outreachAcceptedPoolPanel .outreach-accepted-pool-table th:nth-child(4) { width: 19%; }
-#outreachAcceptedPoolPanel .outreach-accepted-pool-table th:nth-child(5) { width: 19%; }
 
 #outreachAcceptedPoolPanel .outreach-accepted-pool-table a {
   display: block;
@@ -500,7 +499,7 @@
 }
 
 @media (max-width: 620px) {
-  #tab-outreach [data-outreach-process-panel="recipients"] #outreachAcceptedPoolPanel {
+  #tab-outreach [data-outreach-process-panel="messages"] #outreachAcceptedPoolPanel {
     padding-inline: 18px !important;
   }
 }

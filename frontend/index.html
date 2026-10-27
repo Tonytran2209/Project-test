@@ -16,14 +16,14 @@
   <link rel="stylesheet" href="./styles.css?v=20261023-outreach-cleanup-1" />
   <link rel="stylesheet" href="./outreach-stripe.css?v=20261023-remove-settings-1" />
   <link rel="stylesheet" href="./sidebar.css?v=20261023-remove-settings-1" />
-  <link rel="stylesheet" href="./workflow-nav.css?v=20260924-draggable-nav-1" />
+  <link rel="stylesheet" href="./workflow-nav.css?v=20261027-merged-messages-1" />
   <link rel="stylesheet" href="./connect-workspace.css?v=20261023-match-dialog-style-1" />
-  <link rel="stylesheet" href="./acceptance-workspace.css?v=20261006-acceptance-campaign-summary-1" />
-  <link rel="stylesheet" href="./recipients-workspace.css?v=20261007-recipient-campaign-3" />
-  <link rel="stylesheet" href="./messages-workspace.css?v=20260924-messages-grid-2" />
+  <link rel="stylesheet" href="./acceptance-workspace.css?v=20261027-remove-summary-1" />
+  <link rel="stylesheet" href="./recipients-workspace.css?v=20261027-merged-messages-1" />
+  <link rel="stylesheet" href="./messages-workspace.css?v=20261027-single-message-list-1" />
   <link rel="stylesheet" href="./replies-workspace.css?v=20261023-account-dropdown-1" />
   <link rel="stylesheet" href="./campaigns-workspace.css?v=20261008-performance-2" />
-  <link rel="stylesheet" href="./login.css?v=20260923-login-motion-4" />
+  <link rel="stylesheet" href="./login.css?v=20261027-merged-messages-1" />
   <link rel="stylesheet" href="./acceptance-insights.css?v=20261026-wide-seven-accounts-1" />
   <link rel="stylesheet" href="./rate-limits.css?v=20260924-total-capacity-1" />
   <link rel="stylesheet" href="./acceptance-history.css?v=20260924-transparent-overlay-1" />
@@ -39,17 +39,16 @@
       <section class="login-story" aria-labelledby="workflowTitle">
         <div class="login-brand"><img src="./ops-mark.svg" alt="" width="32" height="34" /><span>LinkedIn Ops</span><span class="login-brand-tag">Your outreach workspace</span></div>
         <div class="login-story-heading"><span class="login-eyebrow">A LITTLE STRUCTURE. MORE CONNECTIONS.</span><h2 id="workflowTitle">Good conversations start with a connection.</h2><p>One place for every step of your outreach.</p></div>
-        <div class="login-workflow" aria-label="Workflow: Connect, check acceptance, prepare recipients, send messages, and manage replies">
+        <div class="login-workflow" aria-label="Workflow: Connect, check acceptance, send prepared messages, and manage replies">
           <svg class="login-connections" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none" aria-hidden="true">
-            <path class="login-flow-base" pathLength="100" vector-effect="non-scaling-stroke" d="M44 8H53Q55 8 55 10V27Q55 29 57 29H56M56 29H47Q45 29 45 31V48Q45 50 43 50H44M44 50H53Q55 50 55 52V69Q55 71 57 71H56M56 71H47Q45 71 45 73V90Q45 92 43 92H44"/>
-            <path class="login-flow-highlight" pathLength="100" vector-effect="non-scaling-stroke" d="M44 8H53Q55 8 55 10V27Q55 29 57 29H56M56 29H47Q45 29 45 31V48Q45 50 43 50H44M44 50H53Q55 50 55 52V69Q55 71 57 71H56M56 71H47Q45 71 45 73V90Q45 92 43 92H44"/>
-            <circle vector-effect="non-scaling-stroke" cx="55" cy="29" r="0.35"/><circle vector-effect="non-scaling-stroke" cx="45" cy="50" r="0.35"/><circle vector-effect="non-scaling-stroke" cx="55" cy="71" r="0.35"/>
+            <path class="login-flow-base" pathLength="100" vector-effect="non-scaling-stroke" d="M44 8H53Q55 8 55 10V34Q55 36 57 36H56M56 36H47Q45 36 45 38V62Q45 64 43 64H44M44 64H53Q55 64 55 66V90Q55 92 57 92H56"/>
+            <path class="login-flow-highlight" pathLength="100" vector-effect="non-scaling-stroke" d="M44 8H53Q55 8 55 10V34Q55 36 57 36H56M56 36H47Q45 36 45 38V62Q45 64 43 64H44M44 64H53Q55 64 55 66V90Q55 92 57 92H56"/>
+            <circle vector-effect="non-scaling-stroke" cx="55" cy="36" r="0.35"/><circle vector-effect="non-scaling-stroke" cx="45" cy="64" r="0.35"/>
           </svg>
           <div class="login-node login-node-connect"><span class="login-node-icon peach">↗</span><div><strong>Connect</strong><span>Reach the right people</span></div><small>01</small></div>
           <div class="login-node login-node-accept"><span class="login-node-icon mint">✓</span><div><strong>Acceptance</strong><span>See who connected</span></div><small>02</small></div>
-          <div class="login-node login-node-recipients"><span class="login-node-icon lavender">☷</span><div><strong>Recipients</strong><span>Prepare your audience</span></div><small>03</small></div>
-          <div class="login-node login-node-message"><span class="login-node-icon sky">↗</span><div><strong>Messages</strong><span>Start a conversation</span></div><small>04</small></div>
-          <div class="login-node login-node-reply"><span class="login-node-icon yellow">↩</span><div><strong>Replies</strong><span>Keep it going</span></div><small>05</small></div>
+          <div class="login-node login-node-message"><span class="login-node-icon sky">↗</span><div><strong>Messages</strong><span>Start a conversation</span></div><small>03</small></div>
+          <div class="login-node login-node-reply"><span class="login-node-icon yellow">↩</span><div><strong>Replies</strong><span>Keep it going</span></div><small>04</small></div>
         </div>
       </section>
       <section class="login-form-panel" aria-labelledby="loginTitle">
@@ -97,11 +96,6 @@
           <button class="tab-button" type="button" data-tab="outreach" data-outreach-process-tab="acceptance">
             <span class="sidebar-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg></span>
             <span class="sidebar-nav-text">Acceptance</span>
-          </button>
-
-          <button class="tab-button" type="button" data-tab="outreach" data-outreach-process-tab="recipients">
-            <span class="sidebar-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 19v-1.5a6 6 0 0 1 12 0V19H3ZM16 5.5a3 3 0 0 1 0 5.5M17 13a5 5 0 0 1 4 5v1h-3"/></svg></span>
-            <span class="sidebar-nav-text">Recipients</span>
           </button>
 
           <button class="tab-button" type="button" data-tab="outreach" data-outreach-process-tab="messages">
@@ -619,19 +613,6 @@
         Select a week to view its Connect Jobs.
       </div>
 
-      <section id="outreachAcceptanceCampaignSummary" class="acceptance-campaign-summary" aria-live="polite" hidden>
-        <div class="acceptance-campaign-summary-heading">
-          <div><strong id="outreachAcceptanceCampaignSummaryName"></strong><span>Campaign total for selected week</span></div>
-          <span id="outreachAcceptanceCampaignSummaryBatches"></span>
-        </div>
-        <div class="acceptance-campaign-summary-metrics">
-          <div><span>Prospects added</span><strong id="outreachAcceptanceCampaignSummaryProspects">0</strong></div>
-          <div><span>Accepted</span><strong id="outreachAcceptanceCampaignSummaryAccepted">0</strong></div>
-          <div><span>Pending</span><strong id="outreachAcceptanceCampaignSummaryPending">0</strong></div>
-          <div><span>Failed</span><strong id="outreachAcceptanceCampaignSummaryFailed">0</strong></div>
-        </div>
-      </section>
-
       <div id="outreachAcceptanceTableWrap" class="table-wrap acceptance-grid-wrap" hidden>
         <table class="outreach-acceptance-table">
           <colgroup>
@@ -838,11 +819,13 @@
     </section>
   </div>
 
-  <section class="outreach-process-panel" data-outreach-process-panel="recipients" hidden>
-    <article id="outreachAcceptedPoolPanel" class="panel outreach-accepted-pool-panel outreach-primary-panel" aria-label="Accepted recipients">
+  <section class="outreach-process-panel" data-outreach-process-panel="messages" hidden>
+    <div class="message-workspace-header">
+      <h3>Messages</h3>
+    </div>
+    <article id="outreachAcceptedPoolPanel" class="panel outreach-accepted-pool-panel outreach-primary-panel" aria-label="Recipients to prepare" hidden>
       <div class="recipient-dashboard-heading">
-        <h3>Recipients overview</h3>
-        <p>Accepted connections and message preparation</p>
+        <h3>Needs info</h3>
       </div>
       <div class="recipient-dashboard-toolbar" aria-label="Recipient controls">
         <div id="outreachAcceptedWeekPicker" class="recipient-week-picker">
@@ -859,29 +842,15 @@
           </button>
           <div id="outreachAcceptedCampaignMenu" class="recipient-week-menu" role="group" aria-label="Select a campaign" hidden></div>
         </div>
-        <div class="outreach-pool-controls">
-          <div class="outreach-recipient-filter-group">
-            <div id="outreachAcceptedPoolFilters" class="segmented-filter">
-              <button type="button" data-accepted-filter="all" class="outreach-accepted-filter is-active">All 0</button>
-              <button type="button" data-accepted-filter="ready" class="outreach-accepted-filter">Ready 0</button>
-              <button type="button" data-accepted-filter="prepared" class="outreach-accepted-filter">Prepared 0</button>
-              <button type="button" data-accepted-filter="sent" class="outreach-accepted-filter">Sent 0</button>
-            </div>
-          </div>
-        </div>
-        <div class="message-preparation-actions">
-          <button id="messagePrepareSelectedButton" class="secondary-button" type="button" disabled>Prepare selected</button>
-          <button id="messagePrepareAllButton" class="primary-button" type="button" disabled>Prepare all</button>
-        </div>
       </div>
       <div id="outreachAcceptedPoolEmpty" class="state">No accepted profiles found.</div>
-      <div id="outreachAcceptedPoolTableWrap" class="table-wrap" hidden><table class="outreach-accepted-pool-table"><thead><tr><th class="accepted-select-column"><label class="accepted-select-control"><input id="outreachAcceptedSelectPage" type="checkbox" aria-label="Select eligible profiles on this page"><span aria-hidden="true"></span></label></th><th>LinkedIn</th><th>Account</th><th>Accepted</th><th>Connect ID</th><th>Message</th></tr></thead><tbody id="outreachAcceptedPoolBody"></tbody></table><template id="outreachAcceptedPoolRowTemplate"><tr><td class="accepted-select-column"><label class="accepted-select-control"><input type="checkbox" data-accepted-select aria-label="Select profile for message batch"><span aria-hidden="true"></span></label></td><td><a data-accepted-link target="_blank" rel="noopener noreferrer">—</a></td><td data-accepted-account>—</td><td data-accepted-at>—</td><td><span class="recipient-send-batch" data-accepted-send-batch>—</span></td><td><span class="pill pill-neutral" data-accepted-message>Not sent</span></td></tr></template>
+      <div id="outreachAcceptedPoolTableWrap" class="table-wrap" hidden><table class="outreach-accepted-pool-table"><thead><tr><th>LinkedIn</th><th>Account</th><th>Accepted</th><th>Connect ID</th><th>Message</th></tr></thead><tbody id="outreachAcceptedPoolBody"></tbody></table><template id="outreachAcceptedPoolRowTemplate"><tr><td><a data-accepted-link target="_blank" rel="noopener noreferrer">—</a></td><td data-accepted-account>—</td><td data-accepted-at>—</td><td><span class="recipient-send-batch" data-accepted-send-batch>—</span></td><td><span class="pill pill-neutral" data-accepted-message>Needs info</span></td></tr></template>
         <template id="outreachAcceptedPoolCampaignTemplate">
-          <tr class="recipient-campaign-group-row"><td colspan="6"><div class="recipient-campaign-group"><div class="recipient-campaign-group-copy"><strong data-recipient-campaign-name>—</strong><span data-recipient-campaign-count>0 recipients</span></div><button type="button" class="secondary-button recipient-campaign-select-all" data-recipient-campaign-select>Select all</button></div></td></tr>
+          <tr class="recipient-campaign-group-row"><td colspan="5"><div class="recipient-campaign-group"><div class="recipient-campaign-group-copy"><strong data-recipient-campaign-name>—</strong><span data-recipient-campaign-count>0 recipients</span></div></div></td></tr>
         </template>
         <template id="outreachAcceptedPoolGroupTemplate">
           <tr class="recipient-batch-group-row">
-            <td colspan="6">
+            <td colspan="5">
               <div class="recipient-batch-group">
                 <div>
                   <span class="recipient-batch-group-label">Connect ID</span>
@@ -896,14 +865,7 @@
       <div id="outreachAcceptedPagination" class="outreach-list-pagination" hidden><span id="outreachAcceptedPageMeta" class="panel-meta">Page 1 / 1</span><div class="outreach-list-pagination-actions"><button id="outreachAcceptedPrevPage" type="button" class="secondary-button">Previous</button><button id="outreachAcceptedNextPage" type="button" class="secondary-button">Next</button></div></div>
     </article>
 
-  </section>
-
-  <section class="outreach-process-panel" data-outreach-process-panel="messages" hidden>
-    <article class="panel message-batches-panel outreach-primary-panel">
-      <div class="message-dashboard-heading">
-        <h3>Messages overview</h3>
-        <p>Prepared message batches and sending status</p>
-      </div>
+    <article id="messageBatchesPanel" class="panel message-batches-panel outreach-primary-panel">
       <div class="message-dashboard-toolbar">
         <div id="messageBatchWeekPicker" class="message-week-picker">
           <button id="messageBatchWeekButton" class="secondary-button message-week-button" type="button" aria-expanded="false" aria-controls="messageBatchWeekMenu">
@@ -925,7 +887,7 @@
       <div id="messageBatchEmpty" class="state">Select a week to view message batches.</div>
       <div id="messageBatchGridWrap" class="message-batch-grid-wrap" hidden>
         <div class="message-batch-grid-head" aria-hidden="true">
-          <span>Message batch</span><span>Campaign · source batch</span><span>Recipients</span><span>Prepared</span><span>Status</span><span>Actions</span>
+          <span>Message batch</span><span>Campaign · source batch</span><span>Recipients</span><span>Date</span><span>Status</span><span>Actions</span>
         </div>
         <div id="messageBatchList" class="message-batch-list"></div>
       </div>
@@ -1000,7 +962,6 @@
     <nav id="outreachWorkflowNavigation" class="outreach-workflow-tabs" aria-label="Outreach workflow" title="Drag to move">
       <button type="button" class="outreach-workflow-tab is-active" data-outreach-process-tab="connect" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 19v-1a5.5 5.5 0 0 1 5.5-5.5h2M18 10v7m-3.5-3.5h7"/></svg><span class="workflow-step-label">Connect</span></button>
       <button type="button" class="outreach-workflow-tab" data-outreach-process-tab="acceptance"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg><span class="workflow-step-label">Acceptance</span></button>
-      <button type="button" class="outreach-workflow-tab" data-outreach-process-tab="recipients"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 19v-1.5a6 6 0 0 1 12 0V19H3ZM16 5.5a3 3 0 0 1 0 5.5M17 13a5 5 0 0 1 4 5v1h-3"/></svg><span class="workflow-step-label">Recipients</span></button>
       <button type="button" class="outreach-workflow-tab" data-outreach-process-tab="messages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 3-7.5 18-3.8-7.7L2 9.5 21 3ZM9.7 13.3 21 3"/></svg><span class="workflow-step-label">Messages</span></button>
       <button type="button" class="outreach-workflow-tab outreach-reply-tab" data-tab="replies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v9a2.5 2.5 0 0 1-2.5 2.5H10l-5 4v-4.5A2.5 2.5 0 0 1 4 14V5.5Z"/><path d="M8 8h8M8 12h5"/></svg><span class="workflow-step-label">Replies</span></button>
     </nav>
@@ -1317,7 +1278,7 @@
   <dialog id="usageGuideDialog" class="usage-guide-dialog" aria-labelledby="usageGuideTitle" aria-describedby="usageGuideDescription">
     <div class="usage-guide-header">
       <div class="usage-guide-header-copy">
-        <span class="usage-guide-kicker">USAGE GUIDE <span aria-hidden="true">/</span> <span id="usageGuideStepLabel">STEP 01 OF 05</span></span>
+        <span class="usage-guide-kicker">USAGE GUIDE <span aria-hidden="true">/</span> <span id="usageGuideStepLabel">STEP 01 OF 04</span></span>
         <h2 id="usageGuideTitle">No more manual Connect clicks</h2>
         <p id="usageGuideDescription">BD used to open each LinkedIn profile and click Connect by hand. Now you provide the profile URLs, and the worker sends the invitations for you. This step removes that repetitive manual work from the outreach process.</p>
       </div>
@@ -1387,21 +1348,6 @@
           </div>
         </div>
       </div>
-      <div id="usageGuideRecipientsPreview" class="usage-guide-preview usage-guide-recipients-preview" aria-label="Recipients dashboard guide" hidden>
-        <div class="usage-guide-preview-top"><span class="usage-guide-preview-dot"></span><span>Accepted people · message workflow</span><span class="usage-guide-preview-label">ILLUSTRATION</span></div>
-        <div class="usage-guide-preview-body">
-          <div class="usage-guide-recipients-context"><span>Selected Connect week</span><strong>Week 38</strong><span class="usage-guide-recipients-all">All 10 accepted</span></div>
-          <div class="usage-guide-recipients-flow" aria-label="Ready, Prepared and Sent recipient states">
-            <div class="usage-guide-recipient-stage usage-guide-recipient-ready"><strong>Ready</strong><p>Accepted, not sent, and eligible for a message batch.</p><span class="usage-guide-recipient-person">Jordan Lee</span></div>
-            <span class="usage-guide-recipient-flow-arrow" aria-hidden="true">→</span>
-            <div class="usage-guide-recipient-stage usage-guide-recipient-prepared"><strong>Prepared</strong><p>Accepted and unsent, but no longer eligible to prepare again. Usually already in a batch.</p><span class="usage-guide-recipient-person">Jordan Lee</span></div>
-            <span class="usage-guide-recipient-flow-arrow" aria-hidden="true">→</span>
-            <div class="usage-guide-recipient-stage usage-guide-recipient-sent"><strong>Sent</strong><p>A LinkedIn message has been sent and recorded for this person.</p><span class="usage-guide-recipient-person">Jordan Lee</span></div>
-          </div>
-          <div class="usage-guide-recipients-actions"><span>Ready → Prepare selected / Prepare all</span><span>Prepared → Send from Messages</span></div>
-          <p class="usage-guide-recipients-note">Ready, Prepared and Sent are filters; their counts add up to All for the selected Connect week. Profiles are grouped by Connect ID. Preparing saves a fixed batch without sending a message. An accepted profile missing required details can also appear under Prepared.</p>
-        </div>
-      </div>
       <div id="usageGuideMessagesPreview" class="usage-guide-preview usage-guide-messages-preview" aria-label="An example prepared batch uses a message template with first_name. The worker replaces it with Jordan and Alex for their respective LinkedIn profiles and sends each personalized message." hidden>
         <div class="usage-guide-preview-top"><span class="usage-guide-preview-dot"></span><span>One batch · personalized for every recipient</span><span class="usage-guide-preview-label">ILLUSTRATION</span></div>
         <div class="usage-guide-preview-body">
@@ -1454,9 +1400,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./connect-input.js?v=20261023-match-preview-1"></script>
-  <script src="./app.js?v=20261026-wide-seven-accounts-1"></script>
+  <script src="./app.js?v=20261027-single-message-list-1"></script>
   <script src="./ready-notifications.js?v=20261026-ready-1"></script>
   <script src="./login.js?v=20260923-entry-3"></script>
-  <script src="./usage-guide.js?v=20260926-replies-schedule-1"></script>
+  <script src="./usage-guide.js?v=20261027-merged-messages-1"></script>
 </body>
 </html>
