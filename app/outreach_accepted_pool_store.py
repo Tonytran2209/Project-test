@@ -211,6 +211,7 @@ def _normalize_pool_row(
             )
         ),
         "message_status": message_status,
+        "company_name": _safe_text(prospect.get("company_name")),
         "message_bucket": (
             _message_bucket(
                 message_status
@@ -368,6 +369,7 @@ def get_accepted_pool(
                     "id,"
                     "linkedin_url,"
                     "normalized_url,"
+                    "company_name,"
                     "connect_status,"
                     "message_status,"
                     "last_messaged_at,"

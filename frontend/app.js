@@ -37,6 +37,10 @@ const els = {
   outreachMatchPreviewButton: document.querySelector("#outreachMatchPreviewButton"),
   outreachMatchDialog: document.querySelector("#outreachMatchDialog"),
   outreachMatchRows: document.querySelector("#outreachMatchRows"),
+  messageSnapshotDialog: document.querySelector("#messageSnapshotDialog"),
+  messageSnapshotTitle: document.querySelector("#messageSnapshotTitle"),
+  messageSnapshotCount: document.querySelector("#messageSnapshotCount"),
+  messageSnapshotContent: document.querySelector("#messageSnapshotContent"),
 
   outreachCampaignSelect:
     document.querySelector("#outreachCampaignSelect"),
@@ -5833,10 +5837,13 @@ async function queueMessageBatchForSending(
 
 
 async function openPreparedMessageBatch(batchId, localBatch = null) {
-  if (!batchId) {
-    return;
-  }
-
+  const dialog = els.messageSnapshotDialog;
+  if (!batchId || !dialog) return false;
+  dialog.dataset.batchId = String(batchId);
+  els.messageSnapshotTitle.textContent = localBatch?.batch_code || "Snapshot";
+  els.messageSnapshotCount.textContent = "";
+  els.messageSnapshotContent.innerHTML = '<p class="message-snapshot-state" role="status">Loading…</p>';
+  if (!dialog.open) dialog.showModal();
   try {
     let batch = localBatch;
     if (!batch) {
@@ -5863,69 +5870,40 @@ async function openPreparedMessageBatch(batchId, localBatch = null) {
 
     batch = result.batch || {};
     }
+    if (!dialog.open || dialog.dataset.batchId !== String(batchId)) return false;
     const targets =
       Array.isArray(batch.targets)
         ? batch.targets
         : [];
 
-    if (els.drawerName) {
-      els.drawerName.textContent =
-        batch.batch_code || "Prepared Message Batch";
-    }
-
-    if (els.drawerContent) {
-      els.drawerContent.innerHTML = `
-        <div class="drawer-section">
-          <p class="panel-meta">
-            ${escapeHtml(String(batch.target_count || targets.length))}
-            recipients · ${escapeHtml(batch.status || "prepared")}
-          </p>
-        </div>
-
-        <div class="drawer-section">
+    els.messageSnapshotTitle.textContent = batch.batch_code || "Snapshot";
+    els.messageSnapshotCount.textContent = `${targets.length} ${targets.length === 1 ? "recipient" : "recipients"}`;
+    els.messageSnapshotContent.innerHTML = `
+        <table class="message-snapshot-table">
+          <thead><tr><th scope="col">Name</th><th scope="col">Company</th><th scope="col">LinkedIn URL</th><th scope="col">Account</th></tr></thead>
+          <tbody>
           ${targets.length
             ? targets.map((target) => `
-                <div class="detail-row">
-                  <span>${escapeHtml(
-                    getOutreachAccountDisplayName(
-                      target.assigned_account_id
-                    )
-                  )}</span>
-                  <div>
-                  <a
-                    href="${escapeHtml(target.linkedin_url || "")}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    ${escapeHtml(target.linkedin_url || "—")}
-                  </a>
-                  ${batch.pending_snapshot ? "" : `<p class="panel-meta">Company: ${escapeHtml(target.company_name || "Not saved")}</p>`}
-                  ${target.message_text ? `<p class="ready-draft-preview">${escapeHtml(target.message_text)}</p>` : ""}
-                  </div>
-                </div>
+                <tr>
+                  <td>${escapeHtml(target.first_name || target.ready_first_name || "—")}</td>
+                  <td>${escapeHtml(target.company_name || "—")}</td>
+                  <td>${/^https?:\/\/(?:[a-z0-9-]+\.)?linkedin\.com\/in\//i.test(target.linkedin_url || "")
+                    ? `<a href="${escapeHtml(target.linkedin_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(target.linkedin_url)}</a>`
+                    : escapeHtml(target.linkedin_url || "—")}</td>
+                  <td>${escapeHtml(getOutreachAccountDisplayName(target.assigned_account_id))}</td>
+                </tr>
+                ${target.message_text ? `<tr class="message-snapshot-draft"><td colspan="4">${escapeHtml(target.message_text)}</td></tr>` : ""}
               `).join("")
-            : '<div class="state">This batch has no recipients.</div>'
+            : '<tr><td colspan="4" class="message-snapshot-state">No recipients.</td></tr>'
           }
-        </div>
+          </tbody>
+        </table>
       `;
-    }
-
-    if (els.drawerBackdrop) {
-      els.drawerBackdrop.hidden = false;
-    }
-
-    if (els.detailDrawer) {
-      els.detailDrawer.classList.add("is-open");
-      els.detailDrawer.setAttribute("aria-hidden", "false");
-    }
-
-    // The snapshot drawer owns vertical scrolling while it is open.
-    document.body.style.overflow = "hidden";
     return true;
   } catch (error) {
-    window.alert(
-      error.message || String(error)
-    );
+    if (dialog.open && dialog.dataset.batchId === String(batchId)) {
+      els.messageSnapshotContent.innerHTML = `<p class="message-snapshot-state" role="alert">${escapeHtml(error.message || String(error))}</p>`;
+    }
     return false;
   }
 }
@@ -8555,6 +8533,14 @@ els.outreachUrlInput?.addEventListener(
   updateOutreachDetectedCount
 );
 els.outreachCompanyInput?.addEventListener("input", updateOutreachDetectedCount);
+document.querySelector("[data-message-snapshot-close]")?.addEventListener("click", () => els.messageSnapshotDialog.close());
+els.messageSnapshotDialog?.addEventListener("click", event => {
+  if (event.target !== els.messageSnapshotDialog) return;
+  const rect = els.messageSnapshotDialog.getBoundingClientRect();
+  if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) {
+    els.messageSnapshotDialog.close();
+  }
+});
 els.outreachMatchPreviewButton?.addEventListener("click", () => {
   renderConnectMatchPreview();
   els.outreachMatchDialog.showModal();

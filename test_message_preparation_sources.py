@@ -29,6 +29,26 @@ except ModuleNotFoundError as exc:
 
 
 class MessagePreparationSourcesTest(unittest.TestCase):
+    def test_snapshot_companies_follow_prospect_identity_not_query_order(self):
+        rows = {
+            store.MESSAGE_BATCH_TABLE: [{'id':'message', 'batch_code':'October'}],
+            store.MESSAGE_TARGET_TABLE: [
+                {'id':'m1','prospect_id':'p1','source_target_id':'t1','linkedin_url':'https://linkedin.com/in/alice'},
+                {'id':'m2','prospect_id':'p2','source_target_id':'t2','linkedin_url':'https://linkedin.com/in/bob'}],
+            'outreach_prospects': [
+                {'id':'p2','linkedin_url':'https://linkedin.com/in/bob','company_name':'Company B'},
+                {'id':'p1','linkedin_url':'https://linkedin.com/in/alice','company_name':'Company A'}],
+            store.CONNECT_TARGET_TABLE: [{'id':'t1','job_id':'connect'},{'id':'t2','job_id':'connect'}],
+            store.CONNECT_JOB_TABLE: [{'id':'connect','created_at':'2026-10-23T08:00:00Z','display_name':'Video'}],
+        }
+        class Query:
+            def __init__(self, name): self.name = name
+            def __getattr__(self, name): return lambda *args, **kwargs: self
+            def execute(self): return SimpleNamespace(data=rows[self.name])
+        result = store.get_prepared_message_batch('message', client=SimpleNamespace(table=lambda name: Query(name)))
+        self.assertEqual([target['company_name'] for target in result['targets']], ['Company A','Company B'])
+        self.assertEqual(result['targets'][0]['connect_created_at'], '2026-10-23T08:00:00Z')
+
     def test_message_batch_exposes_original_connect_date_without_rewriting_prepare_date(self):
         rows = {
             store.MESSAGE_TARGET_TABLE: [{'batch_id':'message','source_target_id':'target'}],

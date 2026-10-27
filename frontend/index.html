@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="./connect-workspace.css?v=20261023-match-dialog-style-1" />
   <link rel="stylesheet" href="./acceptance-workspace.css?v=20261027-remove-summary-1" />
   <link rel="stylesheet" href="./recipients-workspace.css?v=20261027-merged-messages-1" />
-  <link rel="stylesheet" href="./messages-workspace.css?v=20261027-single-message-list-1" />
+  <link rel="stylesheet" href="./messages-workspace.css?v=20261027-snapshot-grid-1" />
   <link rel="stylesheet" href="./replies-workspace.css?v=20261023-account-dropdown-1" />
   <link rel="stylesheet" href="./campaigns-workspace.css?v=20261008-performance-2" />
   <link rel="stylesheet" href="./login.css?v=20261027-merged-messages-1" />
@@ -1263,6 +1263,13 @@
 
 
   </div>
+  <dialog id="messageSnapshotDialog" class="message-snapshot-dialog" aria-labelledby="messageSnapshotTitle">
+    <header class="message-snapshot-header">
+      <div><h2 id="messageSnapshotTitle">Snapshot</h2><p id="messageSnapshotCount"></p></div>
+      <button type="button" class="message-snapshot-close" data-message-snapshot-close aria-label="Close snapshot"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    </header>
+    <div id="messageSnapshotContent" class="message-snapshot-content" tabindex="0"></div>
+  </dialog>
   <dialog id="outreachMatchDialog" class="connect-match-dialog" aria-labelledby="outreachMatchTitle">
     <header class="connect-match-header">
       <h2 id="outreachMatchTitle">URL &amp; Company</h2>
@@ -1400,7 +1407,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./connect-input.js?v=20261023-match-preview-1"></script>
-  <script src="./app.js?v=20261027-connect-week-send-1"></script>
+  <script src="./app.js?v=20261027-snapshot-grid-1"></script>
   <script src="./ready-notifications.js?v=20261026-ready-1"></script>
   <script src="./login.js?v=20260923-entry-3"></script>
   <script src="./usage-guide.js?v=20261027-connect-week-send-1"></script>

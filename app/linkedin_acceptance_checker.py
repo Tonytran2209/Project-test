@@ -737,8 +737,8 @@ def _open_acceptance_more_menu(
     - Does NOT call _open_acceptance_ellipsis_menu().
     - Scope to <main>.
     - Exact visible text "More".
-    - Closest ancestor button.
-    - Require aria-expanded attribute so generic text is ignored.
+    - The text match itself may be the button, or a child inside it.
+    - aria-expanded is optional; verify that the menu actually opens instead.
     - No x/y positioning.
     """
     _check_deadline(deadline)
@@ -762,7 +762,8 @@ def _open_acceptance_more_menu(
                     "ACCEPTANCE MORE: "
                     "<main> not found"
                 )
-                return False
+                _sleep(page, deadline=deadline, milliseconds=STATE_POLL_MS)
+                continue
 
             more_texts = (
                 main.get_by_text(
@@ -791,7 +792,7 @@ def _open_acceptance_more_menu(
                     continue
 
                 button = node.locator(
-                    "xpath=ancestor::button[1]"
+                    "xpath=ancestor-or-self::*[self::button or @role='button'][1]"
                 )
 
                 if button.count() == 0:
@@ -804,19 +805,6 @@ def _open_acceptance_more_menu(
                     deadline=deadline,
                     maximum_ms=180,
                 ):
-                    continue
-
-                try:
-                    aria_expanded = (
-                        button.get_attribute(
-                            "aria-expanded"
-                        )
-                    )
-
-                except Exception:
-                    aria_expanded = None
-
-                if aria_expanded is None:
                     continue
 
                 try:
@@ -852,11 +840,12 @@ def _open_acceptance_more_menu(
             if not buttons:
                 print(
                     "ACCEPTANCE MORE: "
-                    "no button[aria-expanded] "
+                    "no visible button "
                     "with exact text More "
                     "inside <main>"
                 )
-                return False
+                _sleep(page, deadline=deadline, milliseconds=STATE_POLL_MS)
+                continue
 
             for candidate_index, button in enumerate(
                 buttons,
@@ -909,6 +898,8 @@ def _open_acceptance_more_menu(
                         "candidate click failed"
                     )
                     continue
+
+                print("ACCEPTANCE MORE: clicked")
 
                 if _wait_for_visible_menu(
                     page,
