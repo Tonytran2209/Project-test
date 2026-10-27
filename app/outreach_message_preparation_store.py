@@ -323,6 +323,7 @@ def get_message_preparation_candidates(
                     source_target_id
                 ),
                 "connect_batch_id": _safe_text(item.get("connect_batch_id")),
+                "connect_created_at": item.get("job_created_at"),
                 "campaign_id": _safe_text(item.get("campaign_id")),
                 "campaign_name": _safe_text(item.get("display_name")),
                 "assigned_account_id": (
@@ -810,6 +811,7 @@ def _attach_source_connect_ids_to_batches(
 
             if job_id:
                 job_code_by_id[job_id] = {
+                    "created_at": row.get("created_at"),
                     "code": _safe_text(row.get("job_code")),
                     "display_name": _safe_text(row.get("display_name")),
                     "batch_name": connect_batch_name(row.get("batch_name"), row.get("created_at")),
@@ -910,6 +912,7 @@ def _attach_source_connect_ids_to_batches(
                     ),
                     "batch_name": job_code_by_id.get(job_id, {}).get("batch_name", ""),
                     "batch_label": job_code_by_id.get(job_id, {}).get("batch_label", ""),
+                    "created_at": job_code_by_id.get(job_id, {}).get("created_at"),
                     "campaign_id": job_code_by_id.get(job_id, {}).get(
                         "campaign_id", ""
                     ),
@@ -1040,7 +1043,7 @@ def _attach_connect_identity_to_targets(*, client: Client, targets: list[dict]) 
     for chunk in _chunked_values(job_ids):
         response = (
             client.table(CONNECT_JOB_TABLE)
-            .select("id,job_code,display_name")
+            .select("id,job_code,display_name,created_at")
             .in_("id", chunk)
             .execute()
         )
@@ -1052,6 +1055,7 @@ def _attach_connect_identity_to_targets(*, client: Client, targets: list[dict]) 
         job = jobs.get(connect_batch_id, {})
         campaign_name = _safe_text(job.get("display_name"))
         target["connect_batch_id"] = connect_batch_id
+        target["connect_created_at"] = job.get("created_at")
         target["connect_batch_code"] = _safe_text(job.get("job_code"))
         target["campaign_id"] = campaign_id_for_name(
             campaign_name, connect_batch_id=connect_batch_id

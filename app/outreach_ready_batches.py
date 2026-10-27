@@ -27,25 +27,26 @@ def prepare_accepted_ready_batches(*, client) -> dict:
             saved = metadata.get(str(item['source_target_id']), {})
             name = str(saved.get('ready_first_name') or '').strip()
             campaign = item.get('campaign_id')
-            if not name or not campaign or saved.get('auto_message_dismissed'):
+            if not campaign or saved.get('auto_message_dismissed'):
                 skipped += 1
                 continue
             if campaign not in templates:
                 templates[campaign] = get_campaign_message_template_for_batch(
                     None, campaign_id=campaign, client=client).get('message_template') or ''
             template = templates[campaign]
-            if not template:
-                skipped += 1
-                continue
             candidate = dict(item)
+            candidate['message_text'] = None
             try:
                 if template_uses_company(template):
                     attach_target_companies([candidate], client=client)
-                candidate['message_text'] = build_message(name, template, company=candidate.get('company_name', ''))
+                if name and template:
+                    candidate['message_text'] = build_message(name, template, company=candidate.get('company_name', ''))
             except ValueError:
-                skipped += 1
-                continue
-            candidate['first_name'] = name
+                # Missing personalization must not prevent creating the recipient
+                # snapshot. Queue validation still checks template/company, and
+                # the sending worker reads the actual name from LinkedIn.
+                pass
+            candidate['first_name'] = name or None
             groups[(item['connect_batch_id'], campaign, template)].append(candidate)
     created = []
     for (source_id, campaign, template), items in groups.items():

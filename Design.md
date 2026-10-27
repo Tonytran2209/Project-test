@@ -90,7 +90,7 @@ The Outreach area is one workspace with three process tabs and a Replies inbox:
 
 1. **Connect** — enter URLs, review targets, start a Connect job, and monitor progress.
 2. **Acceptance** — queue and inspect acceptance checks and history.
-3. **Messages** — one list of automatically prepared message batches and recipients needing information. Needs info, Ready, Queued, Sending, Completed and Failed are row status badges, not tabs. Users review a draft and queue it for sending; there is no manual Prepare step.
+3. **Messages** — one list of accepted recipients and automatically prepared message batches. Ready, Queued, Sending, Completed and Failed are row status badges, not tabs. Users review a draft and queue it for sending; there is no manual Prepare step. Weeks always follow the original Connect batch, never the check/accept/prepare date.
 4. **Replies** — review and respond to captured incoming conversations.
 
 Historical data uses a week-first index across Acceptance, Recipients, and Messages. The default view shows dated week cards with lightweight totals; selecting a week reveals only the Connect Jobs, accepted profiles, or message batches belonging to that week. Batch-level filters remain available after a week is selected, but a default dropdown must never be the primary navigation for historical data.

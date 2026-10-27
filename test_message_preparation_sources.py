@@ -1,5 +1,6 @@
 import unittest
 import sys
+from types import SimpleNamespace
 from types import ModuleType
 from unittest.mock import patch
 from app import outreach_campaign_identity as campaign
@@ -28,6 +29,23 @@ except ModuleNotFoundError as exc:
 
 
 class MessagePreparationSourcesTest(unittest.TestCase):
+    def test_message_batch_exposes_original_connect_date_without_rewriting_prepare_date(self):
+        rows = {
+            store.MESSAGE_TARGET_TABLE: [{'batch_id':'message','source_target_id':'target'}],
+            store.CONNECT_TARGET_TABLE: [{'id':'target','job_id':'connect'}],
+            store.CONNECT_JOB_TABLE: [{'id':'connect','created_at':'2026-09-03T08:00:00Z',
+                                       'display_name':'Video','batch_name':'September'}],
+        }
+        class Query:
+            def __init__(self, name): self.name = name
+            def __getattr__(self, name): return lambda *args, **kwargs: self
+            def execute(self): return SimpleNamespace(data=rows[self.name])
+        client = SimpleNamespace(table=lambda name: Query(name))
+        result = store._attach_source_connect_ids_to_batches(client=client,
+            batches=[{'id':'message','created_at':'2026-10-27T08:00:00Z'}])
+        self.assertEqual(result[0]['source_connect_ids'][0]['created_at'], '2026-09-03T08:00:00Z')
+        self.assertEqual(result[0]['created_at'], '2026-10-27T08:00:00Z')
+
     def test_preparation_splits_by_connect_batch(self):
         candidates = [
             {"connect_batch_id": "source-a", "campaign_id": "campaign-1", "prospect_id": "p1"},

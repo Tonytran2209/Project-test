@@ -10,7 +10,7 @@ function setup() {
   const context={state,Set,normaliseStatus:v=>String(v).toLowerCase(),
     renderOutreachAcceptedPool(){},renderMessagePreparation(){},getWeekInfo:()=>({key:'week'}),getMessageBatchSourceConnectIds:b=>b.sources || []};
   vm.createContext(context);
-  vm.runInContext(extract('function getMessageWorkspaceRows(','function getMessageBatchWeekGroups('), context);
+  vm.runInContext(extract('function getMessageConnectDate(','function getMessageBatchWeekGroups('), context);
   return {context,state};
 }
 test('one Messages panel contains both recipients and message batches with no Recipients navigation',()=>{
@@ -28,7 +28,7 @@ test('user only sends; no visible manual Prepare or recipient selection controls
   assert.match(html,/data-message-batch-send/);
   assert.doesNotMatch(html,/data-message-workspace-view/);
 });
-test('pending recipients appear as Needs info rows in the same list',()=>{
+test('accepted recipients awaiting snapshots remain Ready with a sending action',()=>{
   const ui=setup();
   ui.state.messagePreparation.items=[{prospect_id:'p1'},{prospect_id:'p2'}];
   ui.state.outreachAcceptedPool.items=[
@@ -38,10 +38,13 @@ test('pending recipients appear as Needs info rows in the same list',()=>{
   ui.state.messageBatches=[{id:'ready',status:'prepared'}];
   const result=ui.context.getMessageWorkspaceRows();
   assert.equal(result.length,2);
-  const pending=result.find(r=>r.status==='needs_info');
+  const pending=result.find(r=>r.pending_snapshot);
+  assert.equal(pending.status,'prepared');
   assert.equal(pending.target_count,2);
   assert.equal(pending.targets.length,2);
   assert.equal(ui.context.getFilteredMessageBatches().length,2);
+  assert.match(source,/if \(batch.pending_snapshot\) void openAcceptedBatchForSending/);
+  assert.doesNotMatch(source,/needs_info|Needs info/);
 });
 test('all lifecycle states are shown together, preserving source filtering',()=>{
   const ui=setup();

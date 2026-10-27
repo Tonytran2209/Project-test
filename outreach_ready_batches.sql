@@ -47,7 +47,7 @@ declare
   v_count integer;
   v_label text;
 begin
-  if nullif(trim(p_template), '') is null or jsonb_typeof(p_targets) <> 'array'
+  if jsonb_typeof(p_targets) <> 'array'
      or jsonb_array_length(p_targets) > 200 then
     raise exception 'Invalid Ready batch payload';
   end if;
@@ -66,9 +66,7 @@ begin
                  and p.linkedin_url = v_item->>'linkedin_url'
                  and t.status = 'completed' and p.connect_status = 'invitation_sent'
                  and t.acceptance_status = 'accepted' and not t.auto_message_dismissed
-                 and nullif(trim(t.ready_first_name), '') is not null
-                 and t.ready_first_name = v_item->>'first_name')
-       and nullif(trim(v_item->>'message_text'), '') is not null
+                 and coalesce(t.ready_first_name, '') = coalesce(v_item->>'first_name', ''))
        and not exists (select 1 from public.outreach_job_targets d
                        where d.prospect_id = (v_item->>'prospect_id')::uuid and d.auto_message_dismissed)
        and not exists (select 1 from public.outreach_message_targets m
@@ -79,7 +77,7 @@ begin
   v_count := jsonb_array_length(v_items);
   if v_count = 0 then return jsonb_build_object('created', false); end if;
   insert into public.outreach_message_batches(id, batch_code, status, message_template, target_count, created_at, updated_at)
-  values(v_id, 'MSG-AUTO-' || v_id::text, 'prepared', p_template, v_count, now(), now());
+  values(v_id, 'MSG-AUTO-' || v_id::text, 'prepared', coalesce(p_template, ''), v_count, now(), now());
   insert into public.outreach_message_targets(batch_id, prospect_id, source_target_id, assigned_account_id,
                                              linkedin_url, normalized_url, first_name, message_text, status, created_at, updated_at)
   select v_id, (x->>'prospect_id')::uuid, (x->>'source_target_id')::uuid, x->>'assigned_account_id',

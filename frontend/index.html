@@ -825,7 +825,7 @@
     </div>
     <article id="outreachAcceptedPoolPanel" class="panel outreach-accepted-pool-panel outreach-primary-panel" aria-label="Recipients to prepare" hidden>
       <div class="recipient-dashboard-heading">
-        <h3>Needs info</h3>
+        <h3>Ready</h3>
       </div>
       <div class="recipient-dashboard-toolbar" aria-label="Recipient controls">
         <div id="outreachAcceptedWeekPicker" class="recipient-week-picker">
@@ -844,7 +844,7 @@
         </div>
       </div>
       <div id="outreachAcceptedPoolEmpty" class="state">No accepted profiles found.</div>
-      <div id="outreachAcceptedPoolTableWrap" class="table-wrap" hidden><table class="outreach-accepted-pool-table"><thead><tr><th>LinkedIn</th><th>Account</th><th>Accepted</th><th>Connect ID</th><th>Message</th></tr></thead><tbody id="outreachAcceptedPoolBody"></tbody></table><template id="outreachAcceptedPoolRowTemplate"><tr><td><a data-accepted-link target="_blank" rel="noopener noreferrer">—</a></td><td data-accepted-account>—</td><td data-accepted-at>—</td><td><span class="recipient-send-batch" data-accepted-send-batch>—</span></td><td><span class="pill pill-neutral" data-accepted-message>Needs info</span></td></tr></template>
+      <div id="outreachAcceptedPoolTableWrap" class="table-wrap" hidden><table class="outreach-accepted-pool-table"><thead><tr><th>LinkedIn</th><th>Account</th><th>Accepted</th><th>Connect ID</th><th>Message</th></tr></thead><tbody id="outreachAcceptedPoolBody"></tbody></table><template id="outreachAcceptedPoolRowTemplate"><tr><td><a data-accepted-link target="_blank" rel="noopener noreferrer">—</a></td><td data-accepted-account>—</td><td data-accepted-at>—</td><td><span class="recipient-send-batch" data-accepted-send-batch>—</span></td><td><span class="pill pill-neutral" data-accepted-message>Ready</span></td></tr></template>
         <template id="outreachAcceptedPoolCampaignTemplate">
           <tr class="recipient-campaign-group-row"><td colspan="5"><div class="recipient-campaign-group"><div class="recipient-campaign-group-copy"><strong data-recipient-campaign-name>—</strong><span data-recipient-campaign-count>0 recipients</span></div></div></td></tr>
         </template>
@@ -887,7 +887,7 @@
       <div id="messageBatchEmpty" class="state">Select a week to view message batches.</div>
       <div id="messageBatchGridWrap" class="message-batch-grid-wrap" hidden>
         <div class="message-batch-grid-head" aria-hidden="true">
-          <span>Message batch</span><span>Campaign · source batch</span><span>Recipients</span><span>Date</span><span>Status</span><span>Actions</span>
+          <span>Message batch</span><span>Campaign · source batch</span><span>Recipients</span><span>Connect date</span><span>Status</span><span>Actions</span>
         </div>
         <div id="messageBatchList" class="message-batch-list"></div>
       </div>
@@ -1400,9 +1400,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./connect-input.js?v=20261023-match-preview-1"></script>
-  <script src="./app.js?v=20261027-single-message-list-1"></script>
+  <script src="./app.js?v=20261027-connect-week-send-1"></script>
   <script src="./ready-notifications.js?v=20261026-ready-1"></script>
   <script src="./login.js?v=20260923-entry-3"></script>
-  <script src="./usage-guide.js?v=20261027-merged-messages-1"></script>
+  <script src="./usage-guide.js?v=20261027-connect-week-send-1"></script>
 </body>
 </html>

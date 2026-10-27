@@ -42,20 +42,20 @@ class AutoReadyTests(unittest.TestCase):
         self.assertEqual([c.args[1]['p_source_id'] for c in self.client.rpc.call_args_list], ['s1','s2'])
         self.assertEqual(self.mocks[1].call_count, 1)
 
-    def test_missing_template_stays_in_recipients(self):
+    def test_missing_template_still_creates_sendable_recipient_snapshot(self):
         self.mocks[1].return_value = {'message_template':''}
-        self.assertEqual(ready.prepare_accepted_ready_batches(client=self.client)['skipped'], 1)
-        self.client.rpc.assert_not_called()
+        self.assertEqual(ready.prepare_accepted_ready_batches(client=self.client)['skipped'], 0)
+        self.assertEqual(self.client.rpc.call_args.args[1]['p_template'], '')
 
-    def test_missing_company_stays_in_recipients(self):
+    def test_missing_company_does_not_block_snapshot(self):
         self.mocks[2].side_effect = lambda targets, **kw: targets[0].update(company_name='')
-        self.assertEqual(ready.prepare_accepted_ready_batches(client=self.client)['skipped'], 1)
-        self.client.rpc.assert_not_called()
+        self.assertEqual(ready.prepare_accepted_ready_batches(client=self.client)['skipped'], 0)
+        self.assertIsNone(self.client.rpc.call_args.args[1]['p_targets'][0]['message_text'])
 
-    def test_missing_name_stays_in_recipients(self):
+    def test_missing_name_is_read_by_sender_not_a_preparation_blocker(self):
         self.rows[0]['ready_first_name'] = ''
         ready.prepare_accepted_ready_batches(client=self.client)
-        self.client.rpc.assert_not_called()
+        self.assertIsNone(self.client.rpc.call_args.args[1]['p_targets'][0]['first_name'])
 
     def test_deleted_batch_is_not_automatically_recreated(self):
         self.rows[0]['auto_message_dismissed'] = True
@@ -71,10 +71,10 @@ class AutoReadyTests(unittest.TestCase):
         ready.prepare_accepted_ready_batches(client=self.client)
         self.mocks[2].assert_not_called()
 
-    def test_invalid_template_does_not_prepare(self):
+    def test_invalid_template_keeps_snapshot_for_user_review_before_queue(self):
         self.mocks[1].return_value = {'message_template':'Hi {unknown}'}
         ready.prepare_accepted_ready_batches(client=self.client)
-        self.client.rpc.assert_not_called()
+        self.assertIsNone(self.client.rpc.call_args.args[1]['p_targets'][0]['message_text'])
 
     def test_delete_validates_and_deduplicates_ids(self):
         batch_id = '00000000-0000-0000-0000-000000000001'

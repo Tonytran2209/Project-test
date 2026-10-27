@@ -4630,7 +4630,7 @@ function renderOutreachAcceptedPool() {
           ? "Sent"
           : uiBucket === "prepared"
             ? "Prepared"
-            : "Needs info";
+            : "Ready";
 
       message.textContent =
         messageLabel;
@@ -5015,6 +5015,14 @@ function renderMessageBatchSourceFilter() {
 }
 
 
+function getMessageConnectDate(batch) {
+  const dates = getMessageBatchSourceConnectIds(batch).map(source => source.created_at ||
+    (state.outreachAcceptedPool?.items || []).find(item => String(item.connect_batch_id) === String(source.id))?.job_created_at ||
+    (state.outreachRecentJobs || []).find(job => String(job.id) === String(source.id))?.created_at
+  ).filter(Boolean).sort();
+  return batch.connect_created_at || dates[0] || undefined;
+}
+
 function getMessageWorkspaceRows() {
   const rows = Array.isArray(state.messageBatches) ? [...state.messageBatches] : [];
   const eligible = new Set((state.messagePreparation?.items || []).map(item => String(item.prospect_id)));
@@ -5023,16 +5031,16 @@ function getMessageWorkspaceRows() {
     if (!eligible.has(String(item.prospect_id)) || !item.connect_batch_id) continue;
     const key = String(item.connect_batch_id);
     if (!groups.has(key)) groups.set(key, {
-      id: `needs-info:${key}`, status: "needs_info", batch_code: item.batch_label || item.job_code || key,
-      created_at: item.accepted_at || item.job_created_at, target_count: 0, targets: [],
+      id: `accepted:${key}`, status: "prepared", pending_snapshot: true, batch_code: item.batch_label || item.job_code || key,
+      created_at: item.job_created_at, connect_created_at: item.job_created_at, target_count: 0, targets: [],
       source_connect_ids: [{id: key, batch_label: item.batch_label, display_name: item.campaign_name || item.display_name,
-        code: item.job_code}],
+        code: item.job_code, created_at: item.job_created_at}],
     });
     const group = groups.get(key);
     group.targets.push(item);
     group.target_count += 1;
   }
-  return rows.concat([...groups.values()]).sort((a,b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  return rows.concat([...groups.values()]).sort((a,b) => String(getMessageConnectDate(b) || '').localeCompare(String(getMessageConnectDate(a) || '')));
 }
 
 function getFilteredMessageBatches() {
@@ -5048,11 +5056,7 @@ function getFilteredMessageBatches() {
 
   return batches.filter(
     (batch) => {
-      const week = getWeekInfo(
-        batch?.created_at ||
-        batch?.prepared_at ||
-        batch?.createdAt
-      );
+      const week = getWeekInfo(getMessageConnectDate(batch));
 
       const weekMatches =
         week?.key === state.messageBatchWeekKey;
@@ -5080,11 +5084,7 @@ function getMessageBatchWeekGroups() {
   const groups = new Map();
 
   getMessageWorkspaceRows().forEach((batch) => {
-    const info = getWeekInfo(
-      batch?.created_at ||
-      batch?.prepared_at ||
-      batch?.createdAt
-    );
+    const info = getWeekInfo(getMessageConnectDate(batch));
 
     if (!info) {
       return;
@@ -5134,10 +5134,11 @@ function renderMessageBatchWeekOption(group, selectedKey, currentKey) {
 function getMessageBatchWeekSelection() {
   const groups = getMessageBatchWeekGroups();
   const current = getWeekInfo(new Date());
-  const requestedKey = state.messageBatchWeekKey || current?.key;
+  const requestedKey = state.messageBatchWeekUserSelected ? state.messageBatchWeekKey :
+    groups[0]?.key || state.messageBatchWeekKey || current?.key;
   const selectedKey = requestedKey === current?.key || groups.some(
     (group) => group.key === requestedKey
-  ) ? requestedKey : current?.key;
+  ) ? requestedKey : groups[0]?.key || current?.key;
   const selectedGroup = groups.find((group) => group.key === selectedKey);
 
   if (state.messageBatchWeekKey !== selectedKey) {
@@ -5383,14 +5384,16 @@ function renderMessagePreparation() {
       );
 
     if (code) {
+      const source = getMessageBatchSourceConnectIds(batch);
       code.textContent =
-        batch.batch_code ||
+        (source.length === 1 ? source[0].batch_label || source[0].batch_name : "") || batch.batch_code ||
         "Prepared batch";
+      code.title = batch.batch_code || batchId;
     }
 
     if (meta) {
       meta.textContent =
-        formatDate(batch.created_at);
+        formatDate(getMessageConnectDate(batch));
     }
 
     if (recipients) {
@@ -5430,7 +5433,7 @@ function renderMessagePreparation() {
 
     if (status) {
       status.textContent =
-        ({needs_info: "Needs info", prepared: "Ready", queued: "Queued", processing: "Sending", completed: "Completed", failed: "Failed"})[batchStatus] || batchStatus;
+        ({prepared: "Ready", queued: "Queued", processing: "Sending", completed: "Completed", failed: "Failed"})[batchStatus] || batchStatus;
       status.dataset.status = batchStatus;
     }
 
@@ -5442,7 +5445,7 @@ function renderMessagePreparation() {
         "click",
         () => {
           openPreparedMessageBatch(
-            batchId, batchStatus === "needs_info" ? batch : null
+            batchId, batch.pending_snapshot ? batch : null
           );
         }
       );
@@ -5454,7 +5457,6 @@ function renderMessagePreparation() {
 
       sendButton.disabled =
         !canSend;
-      sendButton.hidden = batchStatus === "needs_info";
 
       sendButton.textContent =
         getMessageBatchSendLabel(
@@ -5465,9 +5467,8 @@ function renderMessagePreparation() {
       sendButton.addEventListener(
         "click",
         () => {
-          openMessageSendModal(
-            batchId
-          );
+          if (batch.pending_snapshot) void openAcceptedBatchForSending(batch, sendButton);
+          else openMessageSendModal(batchId);
         }
       );
     }
@@ -5898,7 +5899,7 @@ async function openPreparedMessageBatch(batchId, localBatch = null) {
                   >
                     ${escapeHtml(target.linkedin_url || "—")}
                   </a>
-                  ${batch.status === "needs_info" ? "" : `<p class="panel-meta">Company: ${escapeHtml(target.company_name || "Not saved")}</p>`}
+                  ${batch.pending_snapshot ? "" : `<p class="panel-meta">Company: ${escapeHtml(target.company_name || "Not saved")}</p>`}
                   ${target.message_text ? `<p class="ready-draft-preview">${escapeHtml(target.message_text)}</p>` : ""}
                   </div>
                 </div>
@@ -7897,11 +7898,28 @@ if (draggableWorkflowNavigation) {
   });
 }
 
+async function openAcceptedBatchForSending(batch, button) {
+  if (button.disabled) return;
+  button.disabled = true;
+  try {
+    const response = await fetch('/api/outreach/messages/prepare-selected', {
+      method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({prospect_ids: batch.targets.map(target => target.prospect_id)})
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok || !result.batch?.id) throw new Error(result.detail || result.error || 'Could not prepare this batch. Refresh and try again.');
+    await Promise.all([loadOutreachAcceptedPool(), loadMessagePreparation(), loadMessageBatches()]);
+    focusPreparedMessageResult(result);
+    await openMessageSendModal(result.batch.id);
+  } catch (error) { window.alert(error.message || String(error)); }
+  finally { button.disabled = false; }
+}
+
 function focusPreparedMessageResult(result) {
   if (!result.created) return;
   const batch = result.batch || result.batches?.[0];
-  const week = getWeekInfo(batch?.created_at);
-  if (week) state.messageBatchWeekKey = week.key;
+  const week = getWeekInfo(getMessageConnectDate(getMessageBatchById(batch?.id) || batch));
+  if (week) { state.messageBatchWeekKey = week.key; state.messageBatchWeekUserSelected = true; }
   state.messageBatchSourceFilter = "all";
   renderMessagePreparation();
 }
@@ -8613,6 +8631,7 @@ document.addEventListener(
     if (messageBatchWeekButton) {
       state.messageBatchWeekKey =
         messageBatchWeekButton.dataset.messageBatchWeekOption || null;
+      state.messageBatchWeekUserSelected = true;
       state.messageBatchPage = 1;
       state.messageBatchSourceFilter = "all";
       setMessageBatchWeekMenuOpen(false, {restoreFocus: true});
@@ -9126,8 +9145,8 @@ window.outreachReadyNavigation = async (batchId) => {
   await loadMessageBatches();
   const batch = getMessageBatchById(batchId);
   if (batch) {
-    const week = getWeekInfo(batch.created_at);
-    if (week) state.messageBatchWeekKey = week.key;
+    const week = getWeekInfo(getMessageConnectDate(batch));
+    if (week) { state.messageBatchWeekKey = week.key; state.messageBatchWeekUserSelected = true; }
     state.messageBatchSourceFilter = getMessageBatchSourceConnectIds(batch)[0]?.id || "all";
     renderMessagePreparation();
   }

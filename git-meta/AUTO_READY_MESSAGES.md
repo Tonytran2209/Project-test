@@ -27,11 +27,11 @@ The idle worker retries preparation once a minute, including after missing
 company data or campaign templates are corrected. It does not open LinkedIn
 profiles just to prepare messages.
 
-Use the campaign's latest saved message template, verified prospect/company data,
-and the captured first name to store a rendered draft in `message_text`. Missing
-name, template, or required company leaves the recipient in Recipients. Already
-accepted historical recipients without a captured name remain there for manual
-preparation; no names are guessed from URL slugs. Existing drafts, queued work,
+Create an accepted-recipient snapshot even when name/template/company is not yet
+available. Use the campaign template and verified personalization to render a
+preview when possible; otherwise keep `message_text` null, never guess content.
+The sending worker reads the actual first name from LinkedIn, and queue validation
+still checks the template and required company before any send. Existing drafts, queued work,
 and sent messages are not overwritten. Atomic SQL prevents retry duplicates and
 creates the batch and its notification together. Automatic preparation never
 queues or sends anything; the existing Queue & Send action is still explicit.
@@ -67,11 +67,25 @@ must be applied before using the new UI; it is not applied automatically by git.
 
 ## Unified Messages workspace
 
-Recipients is no longer a separate tab. Messages has one list; Needs info, Ready,
+Recipients is no longer a separate tab. Messages has one list; Ready,
 Queued, Sending, Completed and Failed are status badges on its rows, not tabs.
-Needs info groups accepted recipients not yet automatically prepared by original
-Connect batch. There are no manual Prepare buttons or recipient
+Accepted recipients awaiting a snapshot also have Send messages: this action
+creates the snapshot and opens the send modal, without queueing or sending until
+the user confirms. There are no manual Prepare buttons or recipient
 selection controls. Preparation still runs after each Acceptance check batch and
 retries during idle periods. A legacy `recipients` navigation request opens the
 merged workspace. The bell opens the matching batch's drawer in that same list.
 This presentation merge requires no additional SQL beyond the migration above.
+
+## Connect-week attribution correction
+
+Message row dates, week filters, week totals and bell navigation use the original
+source Connect job's `created_at`, never `accepted_at` or message-batch creation.
+The API now includes this timestamp in `source_connect_ids`. Default selection
+chooses the latest populated Connect week, including after initial empty loading;
+explicit user-selected weeks remain unchanged. No stored timestamps are rewritten.
+
+Reapply the updated `outreach_ready_batches.sql` to replace the preparation RPC's
+old mandatory-name/template restrictions, then restart Acceptance after pulling.
+The migration is idempotent. Previously accepted recipients without a captured
+name will be snapshotted automatically during the next idle retry.
