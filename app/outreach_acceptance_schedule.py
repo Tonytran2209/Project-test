@@ -13,15 +13,16 @@ VIETNAM = ZoneInfo("Asia/Ho_Chi_Minh")
 # @layer business
 # @feature acceptance
 def cycle_weeks(monday: date) -> list[dict]:
-    """Freeze [first day of previous month, cycle Monday) into calendar weeks."""
+    """Current week first, then backwards to the previous month's first day."""
     month_start = monday.replace(day=1)
     start = (month_start - timedelta(days=1)).replace(day=1)
     weeks = []
-    while start < monday:
-        end = min(start + timedelta(days=7 - start.weekday()), monday)
+    upper = monday + timedelta(days=7)
+    while start < upper:
+        end = min(start + timedelta(days=7 - start.weekday()), upper)
         weeks.append({"start": start.isoformat(), "end": end.isoformat(), "progress": {}})
         start = end
-    return weeks
+    return list(reversed(weeks))
 
 
 class AcceptanceSchedule:
@@ -36,11 +37,32 @@ class AcceptanceSchedule:
         self.path = path
         self.scan_week = scan_week
         self.state = json.loads(path.read_text()) if path.exists() else {
-            "version": 1, "cycles": {}, "slots": [], "active": None,
+            "version": 2, "cycles": {}, "slots": [], "active": None,
         }
-        if self.state.get("version") != 1:
+        if self.state.get("version") not in (1, 2):
             raise ValueError("Unsupported Acceptance schedule state; do not overwrite it.")
         self.state.setdefault("pending_slots", [])
+        if self.state['version'] == 1:
+            # Preserve an untouched backup and completed batch checkpoints.
+            backup = path.with_name(path.name + '.v1-backup')
+            if not backup.exists():
+                with backup.open('x') as stream:
+                    json.dump(self.state, stream, ensure_ascii=False, indent=2)
+            for key, cycle in self.state['cycles'].items():
+                done = cycle['weeks'][:cycle['cursor']]
+                remaining = cycle['weeks'][cycle['cursor']:]
+                inflight = remaining[0] if remaining and (self.state.get('active') or {}).get('cycle') == key else None
+                known = {(week['start'], week['end']) for week in cycle['weeks']}
+                remaining += [week for week in cycle_weeks(date.fromisoformat(key))
+                              if (week['start'], week['end']) not in known]
+                remaining.sort(key=lambda week: week['start'], reverse=True)
+                if inflight is not None:
+                    remaining.remove(inflight)
+                    remaining.insert(0, inflight)
+                cycle['weeks'] = done + remaining
+                cycle['cursor'] = len(done)
+            self.state['version'] = 2
+            self.save()
 
     def defer_busy_slots(self, start: datetime, end: datetime):
         """Queue slots crossed while this live process was busy, not while offline."""
@@ -109,6 +131,9 @@ class AcceptanceSchedule:
 
         cycle = cycles[active["cycle"]]
         week = cycle["weeks"][cycle["cursor"]]
+        next_batch_at = week.get('progress', {}).get('next_batch_at')
+        if next_batch_at and now.astimezone(VIETNAM) < datetime.fromisoformat(next_batch_at):
+            return False
         print(f"ACCEPTANCE SCHEDULE | slot={active['slot']} | cycle={active['cycle']} "
               f"| connect_week={week['start']}..{week['end']}", flush=True)
         # Exceptions leave active intact: never silently skip an interrupted week.
@@ -117,6 +142,11 @@ class AcceptanceSchedule:
             complete = self.scan_week(week, self.save)
         finally:
             self.defer_busy_slots(started, datetime.now(VIETNAM))
+        if complete is None:
+            # The scheduled week is cooling down between batches. Keep active
+            # so the same week resumes outside the 00:00/06:00 start window.
+            self.save()
+            return False
         if complete:
             cycle["cursor"] += 1
         self.state["active"] = None

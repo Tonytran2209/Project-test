@@ -1,7 +1,7 @@
 """Adapt a scheduled Connect week to the existing, unchanged Acceptance checker."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.outreach_acceptance_schedule import VIETNAM
 from app.outreach_acceptance_store import (
@@ -9,18 +9,21 @@ from app.outreach_acceptance_store import (
     load_acceptance_targets,
 )
 
+BATCH_GAP_SECONDS = 20 * 60
+
 
 def _vietnam_boundary(value: str) -> str:
     return datetime.fromisoformat(value).replace(tzinfo=VIETNAM).isoformat()
 
 
 # @feature acceptance
-def scan_connect_week(worker, week: dict, checkpoint) -> bool:
+def scan_connect_week(worker, week: dict, checkpoint) -> bool | None:
     """Read batches by original created_at, then invoke the manual check path.
 
     Per-batch checkpoints survive restarts; no Connect/message action is invoked.
     Failed batches retain their place for a later slot. Existing manual runs are
     allowed to finish instead of creating another check for the same batch.
+    Return None while waiting for the persisted 20-minute inter-batch deadline.
     """
     client = worker.client
     progress = week["progress"]
@@ -43,6 +46,9 @@ def scan_connect_week(worker, week: dict, checkpoint) -> bool:
             return False
         if job_id in progress["done"]:
             continue
+        next_batch_at = progress.get('next_batch_at')
+        if next_batch_at and datetime.now(VIETNAM) < datetime.fromisoformat(next_batch_at):
+            return None
         saved = progress.get("run")
         if saved and saved["job_id"] == job_id:
             rows = (client.table(ACCEPTANCE_CHECK_TABLE).select("id,status,failed_count")
@@ -50,6 +56,7 @@ def scan_connect_week(worker, week: dict, checkpoint) -> bool:
             if rows and rows[0]["status"] == "completed" and not rows[0].get("failed_count"):
                 progress["done"].append(job_id)
                 progress["run"] = None
+                progress.setdefault('next_batch_at', (datetime.now(VIETNAM) + timedelta(seconds=BATCH_GAP_SECONDS)).isoformat())
                 checkpoint()
                 continue
             if rows and rows[0]["status"] == "running":
@@ -71,8 +78,14 @@ def scan_connect_week(worker, week: dict, checkpoint) -> bool:
             run = create_acceptance_check_run(source_job_id=job_id,
                                              total_to_check=len(targets), status="running", client=client)
             progress["run"] = {"id": str(run["id"]), "job_id": job_id}
+            progress.pop('next_batch_at', None)
             checkpoint()
-            worker._process_check_run(run)
+            try:
+                worker._process_check_run(run)
+            finally:
+                progress['next_batch_at'] = (datetime.now(VIETNAM) + timedelta(seconds=BATCH_GAP_SECONDS)).isoformat()
+                checkpoint()
+                print(f"ACCEPTANCE SCHEDULE | batch={job_id} | next_batch_at={progress['next_batch_at']} | gap_minutes=20", flush=True)
             rows = (client.table(ACCEPTANCE_CHECK_TABLE).select("status,failed_count")
                     .eq("id", run["id"]).execute().data or [])
             if not rows or rows[0]["status"] != "completed" or rows[0].get("failed_count"):

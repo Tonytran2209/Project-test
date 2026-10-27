@@ -764,7 +764,7 @@ class OutreachAcceptanceWorker:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Manual and scheduled Acceptance checks")
-    parser.add_argument("--schedule", action="store_true", help="Enable 00:00 / backlog 06:00 Vietnam rotation")
+    parser.add_argument("--schedule", action="store_true", help="Enable newest-first 00:00 / backlog 06:00 Vietnam rotation, with 20-minute batch gaps")
     parser.add_argument("--schedule-state", type=Path,
                         default=Path(__file__).resolve().parent / "output" / "acceptance-schedule.json")
     args = parser.parse_args()
@@ -780,7 +780,7 @@ def main() -> int:
                 raise RuntimeError("Another Acceptance worker is running. Stop it before starting this one.")
             worker = OutreachAcceptanceWorker(schedule_path=args.schedule_state if args.schedule else None)
             if args.schedule:
-                print(f"Acceptance schedule: 00:00 daily; old-cycle backlog 06:00 | state={args.schedule_state}", flush=True)
+                print(f"Acceptance schedule: 00:00 daily; old-cycle backlog 06:00; newest first; batch gap 20 minutes | state={args.schedule_state}", flush=True)
             return worker.run_forever()
 
     except Exception as exc:

@@ -9,18 +9,24 @@ requires `outreach_ready_batches.sql`; see [AUTO_READY_MESSAGES.md](AUTO_READY_M
 
 - Vietnam time (`Asia/Ho_Chi_Minh`), Monday–Sunday calendar weeks.
 - Every Monday starts a new main cycle. Its range is frozen from the first day
-  of the previous month through the end of the preceding week. A partial first
+  of the previous month through the end of the current week. A partial first
   week is clipped to the first day of that month.
-- At 00:00 each day, process one week of the main cycle, oldest first.
+- At 00:00 each day, process one week of the main cycle, newest first:
+  current week, previous week, and so on back to the first week of the previous month.
 - After that cycle is at least seven days old, any unfinished weeks become
   backlog. At 06:00 process one backlog week, oldest unfinished cycle first.
   Continue Tuesday, Wednesday and subsequent days until no backlog remains.
+  Within each backlog cycle, unfinished weeks also run newest first.
 - A new Monday cycle never overwrites an old cycle. Crossing a month boundary
   mid-cycle does not change the old cycle's frozen range.
 - A week without eligible targets completes without opening LinkedIn. A failed
   batch holds the cursor; completed batches within that week are checkpointed.
 - An already queued/running manual check is deferred, not duplicated. The
-  worker continues servicing the manual queue between scheduled weeks.
+  worker continues servicing the manual queue between scheduled batches.
+- Wait 20 minutes after a scheduled batch finishes before starting the next
+  batch in that week. The deadline is persisted, so restarting does not bypass
+  the wait. Empty batches need no browser check; the last batch completes the
+  week immediately without a final wait. Manual checks are unchanged.
 - Slots have a 15-minute start grace window. Missed offline slots are not replayed.
   An interrupted scheduled week resumes from its saved batch progress on restart.
 - If the live Acceptance worker is still processing a manual or scheduled run at
@@ -48,6 +54,9 @@ is shut down or the user is logged out. Do not use sudo.
 Persistent progress: `output/acceptance-schedule.json`. Do not delete this file
 on deploy/restart or while the worker is running. It is local to this Mac;
 moving to another worker requires stopping this worker and copying the state.
+Old version-1 progress is upgraded automatically with a `.v1-backup` copy.
+Completed weeks remain completed; an interrupted week resumes before the
+remaining weeks switch to newest-first order. No SQL is needed for this change.
 Updated manual and scheduled worker modes share `output/acceptance-worker.lock`.
 This lock prevents duplicate Acceptance processes on the same Mac, not other
 Connect/Message/Reply workers using those browser profiles.
