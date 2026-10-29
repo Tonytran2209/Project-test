@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from backend.dashboard_pages import router as dashboard_pages_router
 
 from app.outreach_campaign_identity import campaign_id_for_name, connect_batch_label
 from app.outreach_connect_input import prepare_connect_entries
@@ -139,6 +140,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 
 if FRONTEND_DIR.exists():
+    app.include_router(dashboard_pages_router)
     app.mount(
         "/dashboard",
         StaticFiles(

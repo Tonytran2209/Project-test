@@ -7742,6 +7742,10 @@ document
         return;
       }
 
+      if (window.outreachPages) {
+        void window.outreachPages.navigate(button.dataset.outreachProcessTab || tabName);
+        return;
+      }
       switchTab(tabName);
 
       if (button.dataset.outreachProcessTab) {
@@ -7983,7 +7987,7 @@ function setOutreachProcessTab(
 
   requestAnimationFrame(syncOutreachWorkflowPill);
 
-  if (cleaned === "messages") {
+  if (cleaned === "messages" && !window.outreachPages) {
     void Promise.all([
       loadOutreachAcceptedPool(),
       loadMessagePreparation(),
@@ -8499,6 +8503,10 @@ document.addEventListener(
 els.refreshButton?.addEventListener(
   "click",
   () => {
+    if (window.outreachPages) {
+      void window.outreachPages.refresh();
+      return;
+    }
     void loadOutreachDashboard();
 
     const repliesPanel = document.querySelector("#tab-replies");
@@ -8629,6 +8637,10 @@ document.addEventListener(
 
     if (replyButton) {
       event.preventDefault();
+      if (window.outreachPages) {
+        void window.outreachPages.navigate("replies");
+        return;
+      }
       switchTab("replies");
       void loadOutreachReplies();
       return;
@@ -8645,6 +8657,10 @@ document.addEventListener(
 
     event.preventDefault();
 
+    if (window.outreachPages) {
+      void window.outreachPages.navigate(button.dataset.outreachProcessTab);
+      return;
+    }
     if (document.querySelector("#tab-outreach")?.hidden) {
       switchTab("outreach");
     }
@@ -9093,7 +9109,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-{
+if (!window.outreachPages) {
   const savedTab = localStorage.getItem(
     LAST_TAB_STORAGE_KEY
   );
@@ -9116,16 +9132,20 @@ document.addEventListener("keydown", (event) => {
 
 updateOutreachDetectedCount();
 renderConnectCampaignSelection();
-void loadConnectCampaigns();
+if (!window.outreachPages) void loadConnectCampaigns();
 
 renderOutreachDashboard();
 
 renderOutreachSubmittingState();
 
-loadOutreachDashboard();
+if (!window.outreachPages) loadOutreachDashboard();
 
 renderWorkerActivity();
 window.outreachReadyNavigation = async (batchId) => {
+  if (window.outreachPages && window.outreachPages.current !== "messages") {
+    await window.outreachPages.navigate("messages", {snapshot: batchId});
+    return;
+  }
   switchTab("outreach");
   setOutreachProcessTab("messages");
   await loadMessageBatches();
@@ -9139,6 +9159,7 @@ window.outreachReadyNavigation = async (batchId) => {
   if (await openPreparedMessageBatch(batchId) === false) throw new Error("Could not open Ready batch.");
 };
 window.addEventListener("outreach-ready-updated", () => {
+  if (window.outreachPages && window.outreachPages.current !== "messages") return;
   void Promise.all([loadOutreachAcceptedPool(), loadMessagePreparation(), loadMessageBatches()])
     .then(() => { renderOutreachAcceptedPool(); renderMessagePreparation(); });
 });
@@ -9146,13 +9167,44 @@ void loadWorkerActivity();
 window.setInterval(() => {
   if (!document.hidden) void loadWorkerActivity();
 }, 15000);
-window.setInterval(() => { void pollOutreachReplyRevision(); }, 30000);
-window.setInterval(() => { void pollLatestOutreachReplyScan(); }, 5000);
-
-startOutreachPolling();
+if (!window.outreachPages) {
+  window.setInterval(() => { void pollOutreachReplyRevision(); }, 30000);
+  window.setInterval(() => { void pollLatestOutreachReplyScan(); }, 5000);
+  startOutreachPolling();
+}
 
 // The presentation-only login may load this script after DOMContentLoaded.
-if (document.readyState === "loading") {
+if (window.outreachPages) {
+  const refreshWorkspace = async page => {
+    if (page === "connect" || page === "acceptance") return loadOutreachDashboard();
+    if (page === "messages") {
+      await Promise.all([loadOutreachAcceptedPool(), loadMessagePreparation(), loadMessageBatches()]);
+      renderMessagePreparation();
+    }
+    if (page === "replies") return loadOutreachReplies();
+    if (page === "campaigns") return loadCampaignPerformance();
+  };
+  void window.outreachPages.start({
+    show(page) {
+      if (["connect", "acceptance", "messages"].includes(page)) {
+        state.outreachProcessTab = page;
+        switchTab("outreach");
+        setOutreachProcessTab(page);
+      } else switchTab(page);
+    },
+    refresh: refreshWorkspace,
+    loadConnectCampaigns,
+    loadConnect: () => refreshWorkspace("connect"),
+    connectPollInterval: getOutreachPollInterval,
+    loadAcceptance: () => refreshWorkspace("acceptance"),
+    loadMessages: () => refreshWorkspace("messages"),
+    loadReplies: () => refreshWorkspace("replies"),
+    pollReplyRevision: pollOutreachReplyRevision,
+    pollReplyScan: pollLatestOutreachReplyScan,
+    loadCampaigns: () => refreshWorkspace("campaigns"),
+    openSnapshot: batchId => window.outreachReadyNavigation(batchId),
+  });
+} else if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
     setOutreachProcessTab(state.outreachProcessTab || "connect");
   }, { once: true });

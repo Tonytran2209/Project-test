@@ -93,6 +93,23 @@ rg -n -B 1 -A 1 '@feature replies' app frontend
 
 ## Cách tìm và kiểm tra trước khi sửa
 
+### Trang và vòng đời tải dữ liệu
+
+- Mỗi workspace có URL riêng: `/dashboard/connect`, `/dashboard/acceptance`,
+  `/dashboard/messages`, `/dashboard/replies`, `/dashboard/campaigns`.
+- `backend/dashboard_pages.py` khai báo route chính xác trước static mount;
+  không bắt nhầm URL asset. `frontend/index.html` là khung giao diện dùng chung.
+- `frontend/workspace-router.js` chỉ quản lý URL, Back/Forward và vòng đời trang.
+  `frontend/pages/<workspace>.js` chỉ khởi tạo loader/polling của workspace đó;
+  khi rời trang phải dừng timer qua cleanup.
+- `frontend/app.js` hiện vẫn là runtime dùng chung cho render và thao tác cũ;
+  đây chưa phải việc tách toàn bộ runtime thành các bundle độc lập. Không thêm
+  loader khởi động cho mọi trang vào file này. Logic nghiệp vụ/API/worker giữ nguyên.
+- Bell và trạng thái worker là thành phần khung dùng chung. Ready batch dùng
+  `/dashboard/messages?snapshot=<batch-id>` để mở đúng snapshot từ trang khác.
+- Chạy `node --test test_workspace_pages.cjs` và
+  `python3 -m unittest test_dashboard_pages` khi thay đổi điều hướng.
+
 Tìm theo tên nghiệp vụ, API route hoặc định danh UI, rồi lần theo nơi gọi:
 
 ```sh
