@@ -257,10 +257,18 @@
 .connect-history-run-status { align-self: start; padding: 3px 7px; border-radius: 5px; background: #f1f1ef; color: #77766f; font-size: 11px; line-height: 1.2; white-space: nowrap; }
 .connect-history-run-status.is-completed { background: #e8f5ed; color: #18794e; font-weight: 600; }
 .connect-history-run-meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 16px; color: #858580; font-size: 11px; line-height: 1.45; white-space: normal; }
-.connect-history-progress { grid-column: 1 / -1; display: flex; width: 100%; height: 8px; overflow: hidden; border-radius: 999px; background: #e9e9e7; }
+.connect-history-progress-wrap { position: relative; grid-column: 1 / -1; display: block; width: 100%; min-width: 0; }
+.connect-history-progress { display: flex; width: 100%; height: 8px; overflow: hidden; border-radius: 999px; background: #e9e9e7; }
 .connect-history-progress > span { display: block; height: 100%; flex: 0 0 auto; transition: width 220ms ease; }
 .connect-history-progress-success { background: #2e9b63; }
 .connect-history-progress-failed { background: #d95b5b; }
+.connect-history-progress-tags { position: absolute; right: 0; bottom: calc(100% + 7px); z-index: 2; display: flex; max-width: min(330px, calc(100vw - 52px)); align-items: center; gap: 4px; padding: 5px; border: 1px solid #e5e5e1; border-radius: 7px; background: #fff; box-shadow: 0 8px 22px rgba(27, 27, 24, .14); opacity: 0; pointer-events: none; transform: translateY(3px); transition: opacity 140ms ease, transform 140ms ease; white-space: nowrap; }
+.connect-history-progress-wrap:hover .connect-history-progress-tags,
+.connect-history-run:focus-visible .connect-history-progress-tags { opacity: 1; transform: translateY(0); }
+.connect-history-progress-tag { padding: 3px 6px; border-radius: 999px; font-size: 9px; font-weight: 650; }
+.connect-history-progress-tag-processed { background: #f1f1ef; color: #62615c; }
+.connect-history-progress-tag-success { background: #e8f5ed; color: #18794e; }
+.connect-history-progress-tag-failed { background: #fdeaea; color: #b43a3a; }
 @media (prefers-reduced-motion: reduce) { .connect-history-progress > span { transition: none; } }
 .connect-history-empty { padding: 18px; border: 1px dashed #dcdcd7; border-radius: 7px; color: #858580; font-size: 13px; }
 #tab-outreach .outreach-job-result[hidden],

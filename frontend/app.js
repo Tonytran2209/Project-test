@@ -6422,11 +6422,12 @@ function renderConnectHistory(jobs) {
       const total = Math.max(1, Number(job.target_count) || 0, successCount + failedCount);
       const successPercent = Math.min(100, (successCount / total) * 100);
       const failedPercent = Math.min(100 - successPercent, (failedCount / total) * 100);
+      const progressWrap = document.createElement("span");
+      progressWrap.className = "connect-history-progress-wrap";
       const progress = document.createElement("span");
       progress.className = "connect-history-progress";
       progress.setAttribute("role", "img");
       progress.setAttribute("aria-label", `${processedCount} processed, ${successCount} success, ${failedCount} failed`);
-      progress.title = `${processedCount} processed · ${successCount} success · ${failedCount} failed`;
       const successSegment = document.createElement("span");
       successSegment.className = "connect-history-progress-success";
       successSegment.style.width = `${successPercent}%`;
@@ -6434,7 +6435,21 @@ function renderConnectHistory(jobs) {
       failedSegment.className = "connect-history-progress-failed";
       failedSegment.style.width = `${failedPercent}%`;
       progress.append(successSegment, failedSegment);
-      button.append(progress);
+      const details = document.createElement("span");
+      details.className = "connect-history-progress-tags";
+      details.setAttribute("aria-hidden", "true");
+      for (const [kind, label, count] of [
+        ["processed", "Processed", processedCount],
+        ["success", "Success", successCount],
+        ["failed", "Failed", failedCount]
+      ]) {
+        const tag = document.createElement("span");
+        tag.className = `connect-history-progress-tag connect-history-progress-tag-${kind}`;
+        tag.textContent = `${label} ${count}`;
+        details.append(tag);
+      }
+      progressWrap.append(progress, details);
+      button.append(progressWrap);
       button.addEventListener("click", () => {
         state.selectedConnectHistoryJobId = state.selectedConnectHistoryJobId === job.id
           ? null : job.id;
