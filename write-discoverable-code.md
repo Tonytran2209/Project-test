@@ -110,4 +110,4 @@ python3 -m unittest test_outreach_cleanup test_connect_company_input test_messag
 git diff --check
 ```
 
-Không dùng chạy toàn bộ `test*.py` một cách mù quáng: repo còn test thủ công có thể gửi tin LinkedIn thật, ví dụ `test_message_account_02_profile_guard.py`. Test local qua không đồng nghĩa đã xác minh worker hoặc database production.
+Các script test thủ công cũ mở profile hoặc gửi tin LinkedIn thật đã được dọn khỏi repo. Các test hồi quy hiện tại dùng mock/fixture, không cần browser hay database production; vẫn kiểm tra tác dụng phụ trước khi chạy một test mới. Test local qua không đồng nghĩa đã xác minh worker hoặc database production.
