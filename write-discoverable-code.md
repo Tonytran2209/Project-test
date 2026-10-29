@@ -109,6 +109,14 @@ rg -n -B 1 -A 1 '@feature replies' app frontend
   `/dashboard/messages?snapshot=<batch-id>` để mở đúng snapshot từ trang khác.
 - Chạy `node --test test_workspace_pages.cjs` và
   `python3 -m unittest test_dashboard_pages` khi thay đổi điều hướng.
+- Campaigns có cache riêng theo timeframe: server giữ kết quả 30 giây trong
+  từng process (`app/outreach_campaign_cache.py`), gộp request trùng để không
+  cùng đọc lại DB. Endpoint đồng bộ chạy trong threadpool của FastAPI, không
+  chặn event loop bằng Supabase I/O. Không đổi cách tính thống kê.
+- `frontend/campaign-cache.js` giữ bản xem tối đa 5 phút trong bộ nhớ và
+  sessionStorage của tab; bản cũ được hiển thị ngay rồi cập nhật nền. Kết quả
+  dưới 15 giây được dùng lại. Refresh/retry gọi `refresh=true` để bỏ qua cả hai
+  cache; lỗi không được cache hay kéo dài TTL. HTTP API vẫn dùng `no-store`.
 
 Tìm theo tên nghiệp vụ, API route hoặc định danh UI, rồi lần theo nơi gọi:
 

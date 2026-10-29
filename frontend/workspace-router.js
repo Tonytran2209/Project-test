@@ -43,6 +43,6 @@
       window.addEventListener('pagehide', () => cleanup());
       return mount();
     },
-    refresh() { return runtime.refresh(current); },
+    refresh() { return runtime.refresh(current, {force:true}); },
   };
 })();

@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from backend.dashboard_pages import router as dashboard_pages_router
+from app.outreach_campaign_cache import campaign_cache
 
 from app.outreach_campaign_identity import campaign_id_for_name, connect_batch_label
 from app.outreach_connect_input import prepare_connect_entries
@@ -1910,15 +1911,16 @@ async def send_outreach_reply_api(
 
 
 @app.get("/api/outreach/campaigns/performance")
-async def get_outreach_campaign_performance_api(window: str = "all") -> JSONResponse:
+def get_outreach_campaign_performance_api(window: str = "all", refresh: bool = False) -> JSONResponse:
     if window not in ("1d", "7d", "30d", "all"):
         return JSONResponse(status_code=400, content={"ok": False, "error": "Invalid timeframe"})
     try:
-        campaigns = get_campaign_performance(window)
+        campaigns = campaign_cache.get(window, get_campaign_performance, force=refresh)
     except Exception:
         logger.exception("Could not load campaign performance")
         return JSONResponse(status_code=500, content={"ok": False, "error": "Could not load campaign performance"})
-    return JSONResponse(content={"ok": True, "window": window, "campaigns": campaigns})
+    return JSONResponse(content={"ok": True, "window": window, "campaigns": campaigns},
+                        headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/outreach/worker-activity")

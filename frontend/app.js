@@ -595,6 +595,7 @@ const state = {
   campaignPerformanceLoading: false,
   campaignPerformanceError: "",
   campaignPerformanceRequestId: 0,
+  campaignPerformanceLoadedWindow: null,
   expandedCampaignId: null,
   selectedConnectHistoryJobId: null,
   expandedConnectWeekKey: null,
@@ -7540,7 +7541,7 @@ function renderCampaignPerformance() {
     button.setAttribute("aria-pressed", String(active));
   });
   status.classList.remove("is-error", "is-loading");
-  if (state.campaignPerformanceLoading) {
+  if (state.campaignPerformanceLoading && state.campaignPerformanceLoadedWindow !== state.campaignPerformanceWindow) {
     status.hidden = false;
     status.classList.add("is-loading");
     status.textContent = "Loading campaign performance…";
@@ -7555,7 +7556,7 @@ function renderCampaignPerformance() {
     status.hidden = false;
     status.classList.add("is-error");
     status.innerHTML = `<span>${escapeHtml(state.campaignPerformanceError)}</span><button type="button" data-campaign-retry>Try again</button>`;
-    table.hidden = true;
+    table.hidden = state.campaignPerformanceLoadedWindow !== state.campaignPerformanceWindow || campaigns.length === 0;
     return;
   }
   status.hidden = campaigns.length > 0;
@@ -7581,25 +7582,32 @@ function renderCampaignPerformance() {
   }).join("");
 }
 
-async function loadCampaignPerformance() {
+async function loadCampaignPerformance({force = false} = {}) {
+  const windowKey = state.campaignPerformanceWindow;
+  const cached = window.outreachCampaignCache.read(windowKey);
+  if (cached) {
+    state.campaignPerformance = cached.data;
+    state.campaignPerformanceLoadedWindow = windowKey;
+    if (windowKey === "all") state.campaignPerformanceOptions = cached.data;
+    renderCampaignPerformanceFilter();
+  }
   const requestId = ++state.campaignPerformanceRequestId;
   state.campaignPerformanceLoading = true;
   state.campaignPerformanceError = "";
   renderCampaignPerformance();
   try {
-    const response = await fetch(`/api/outreach/campaigns/performance?window=${encodeURIComponent(state.campaignPerformanceWindow)}`, {cache: "no-store"});
-    const result = await response.json();
-    if (!response.ok || !result.ok) throw new Error(result.error || "Could not load campaigns.");
+    const campaigns = await window.outreachCampaignCache.load(windowKey, {force});
     if (requestId !== state.campaignPerformanceRequestId) return;
-    state.campaignPerformance = Array.isArray(result.campaigns) ? result.campaigns : [];
-    if (state.campaignPerformanceWindow === "all") {
+    state.campaignPerformance = campaigns;
+    state.campaignPerformanceLoadedWindow = windowKey;
+    if (windowKey === "all") {
       state.campaignPerformanceOptions = state.campaignPerformance;
     }
     renderCampaignPerformanceFilter();
     renderCampaignPerformance();
   } catch (error) {
     if (requestId !== state.campaignPerformanceRequestId) return;
-    state.campaignPerformance = [];
+    if (state.campaignPerformanceLoadedWindow !== windowKey) state.campaignPerformance = [];
     state.campaignPerformanceError = error.message || "Could not load campaigns.";
   } finally {
     if (requestId === state.campaignPerformanceRequestId) {
@@ -7633,7 +7641,7 @@ document.querySelector("#campaignsRows")?.addEventListener("click", (event) => {
     .find((row) => row.dataset.campaignId === campaignId)?.focus();
 });
 document.querySelector("#campaignsStatus")?.addEventListener("click", (event) => {
-  if (event.target.closest("[data-campaign-retry]")) void loadCampaignPerformance();
+  if (event.target.closest("[data-campaign-retry]")) void loadCampaignPerformance({force:true});
 });
 
 function switchTab(tabName) {
@@ -9175,14 +9183,14 @@ if (!window.outreachPages) {
 
 // The presentation-only login may load this script after DOMContentLoaded.
 if (window.outreachPages) {
-  const refreshWorkspace = async page => {
+  const refreshWorkspace = async (page, {force = false} = {}) => {
     if (page === "connect" || page === "acceptance") return loadOutreachDashboard();
     if (page === "messages") {
       await Promise.all([loadOutreachAcceptedPool(), loadMessagePreparation(), loadMessageBatches()]);
       renderMessagePreparation();
     }
     if (page === "replies") return loadOutreachReplies();
-    if (page === "campaigns") return loadCampaignPerformance();
+    if (page === "campaigns") return loadCampaignPerformance({force});
   };
   void window.outreachPages.start({
     show(page) {
