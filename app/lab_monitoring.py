@@ -286,34 +286,54 @@ def _rss_bytes() -> int | None:
     return None
 
 
-def _fetch(client, table: str) -> tuple[list[dict] | None, bool]:
+_SECRETISH = re.compile(r"(eyJ[\w-]{10,}|sb_[\w-]{10,}|[A-Za-z0-9_\-]{32,}|(?:key|token|secret|password)\s*[:=]\s*\S+)", re.IGNORECASE)
+
+
+def safe_reason(error: BaseException) -> str:
+    """Short, secret-free reason: exception type, PostgREST code and message (names only, no data)."""
+    code = getattr(error, "code", None)
+    message = getattr(error, "message", None) or str(error)
+    text = " ".join(str(part) for part in (type(error).__name__ + ":", code, message) if part)
+    return _SECRETISH.sub("[ẩn]", text)[:200]
+
+
+def _fetch(client, table: str) -> tuple[list[dict] | None, bool, str | None]:
+    if client is None:
+        return None, False, "Không có Supabase client"
     try:
         response = client.table(table).select("*").order("created_at", desc=True).limit(ROW_LIMIT).execute()
-    except Exception:
-        return None, False
+    except Exception as error:
+        return None, False, safe_reason(error)
     data = list(response.data or [])
-    return data, len(data) >= ROW_LIMIT
+    return data, len(data) >= ROW_LIMIT, None
 
 
 def build_report(client, days: int, *, worker_activity: Callable[[], dict] | None = None,
-                 now: Callable[[], datetime] = lambda: datetime.now(timezone.utc)) -> dict:
+                 now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+                 client_error: str | None = None) -> dict:
     current = now()
     since = datetime(current.year, current.month, current.day, tzinfo=timezone.utc) - timedelta(days=days - 1)
 
     db_start = time.monotonic()
     sources: dict[str, list[dict] | None] = {}
     truncated: set[str] = set()
+    errors: dict[str, str] = {}
     for source in JOB_SOURCES:
-        rows, cut = _fetch(client, source.table)
+        rows, cut, error = _fetch(client, source.table)
         sources[source.key] = rows
         if cut:
             truncated.add(source.key)
+        if error:
+            errors[source.table] = error
     db_ms = round((time.monotonic() - db_start) * 1000 / len(JOB_SOURCES))
-    sessions, _ = _fetch(client, "outreach_account_sessions")
+    sessions, _, session_error = _fetch(client, "outreach_account_sessions")
+    if session_error:
+        errors["outreach_account_sessions"] = session_error
     try:
-        workers = worker_activity() if worker_activity else None
-    except Exception:
+        workers = worker_activity() if worker_activity and client is not None else None
+    except Exception as error:
         workers = None
+        errors["outreach_worker_activity"] = safe_reason(error)
 
     reachable = [k for k, v in sources.items() if v is not None]
     inventory = {source.table: (None if sources[source.key] is None else _status_counts(sources[source.key]))
@@ -338,9 +358,25 @@ def build_report(client, days: int, *, worker_activity: Callable[[], dict] | Non
         "database": {
             "status": "ready" if len(reachable) == len(JOB_SOURCES) else "degraded",
             "responseMs": db_ms if reachable else None,
+            "error": client_error or (next(iter(errors.values())) if errors else None),
         },
         "jobHistory": job_history(sources, since, truncated),
         "jobHistoryAllTime": job_history(sources, None, truncated),
         "inventory": inventory,
-        "profile": build_profile(sources, sessions, workers, since, days),
+        "profile": _with_diagnostics(build_profile(sources, sessions, workers, since, days), client_error, errors),
     }
+
+
+def _with_diagnostics(profile: dict, client_error: str | None, errors: dict[str, str]) -> dict:
+    """Show why data is missing, first, so 'no data' is never mistaken for zero activity."""
+    if not client_error and not errors:
+        return profile
+    rows = [["Supabase client", client_error]] if client_error else []
+    rows += [[table, reason] for table, reason in errors.items()]
+    profile["sections"].insert(0, {
+        "id": "diagnostics",
+        "title": "Chưa đọc được dữ liệu",
+        "description": "Các nguồn dưới đây lỗi nên số liệu liên quan hiển thị 'Chưa có dữ liệu' thay vì 0.",
+        "table": {"columns": ["Nguồn", "Lý do"], "rows": rows[:12]},
+    })
+    return profile
