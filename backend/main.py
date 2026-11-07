@@ -1,3 +1,4 @@
+import hmac
 import logging
 import os
 from pathlib import Path
@@ -89,6 +90,8 @@ from app.outreach_reply_send_store import (
     queue_prepared_reply_send,
 )
 from app.outreach_worker_activity import get_outreach_worker_activity
+from app.outreach_dashboard_store import get_outreach_client
+from app.lab_monitoring import build_report as build_lab_report
 
 
 
@@ -198,6 +201,33 @@ def health_check() -> dict[str, Any]:
         },
     }
 
+
+
+# =========================================================
+# AI AGENT LAB MONITORING (read-only)
+# =========================================================
+
+@app.get("/internal/monitoring", include_in_schema=False)
+def lab_monitoring(request: Request, days: int = 7):
+    """Counts-only report for AI Agent Lab's Performance tab.
+
+    Disabled (404) unless LAB_MONITORING_TOKEN is set; the Lab sends it as a bearer token.
+    """
+    token = os.getenv("LAB_MONITORING_TOKEN", "").strip()
+    if len(token) < 32:
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    supplied = request.headers.get("authorization", "")
+    if not hmac.compare_digest(supplied.encode(), ("Bearer " + token).encode()):
+        return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+    if days < 1 or days > 30:
+        return JSONResponse({"detail": "days must be 1..30"}, status_code=422)
+    try:
+        client = get_outreach_client()
+    except Exception:
+        logger.warning("Lab monitoring: Supabase client unavailable")
+        client = None
+    report = build_lab_report(client, days, worker_activity=get_outreach_worker_activity)
+    return JSONResponse(report, headers={"Cache-Control": "private, no-store"})
 
 
 # =========================================================
