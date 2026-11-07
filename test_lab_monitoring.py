@@ -112,8 +112,10 @@ class LabMonitoringTest(unittest.TestCase):
         self.assertEqual(report["database"]["status"], "degraded")
         self.assertFalse(report["jobHistory"]["complete"])
         self.assertIsNone(report["inventory"]["outreach_message_batches"])
-        funnel = {m["label"]: m["value"] for m in report["profile"]["sections"][0]["metrics"]}
+        sections = {s["id"]: s for s in report["profile"]["sections"]}
+        funnel = {m["label"]: m["value"] for m in sections["funnel"]["metrics"]}
         self.assertIsNone(funnel["Tin nhắn đã gửi"])
+        self.assertEqual(sections["diagnostics"]["table"]["rows"], [["outreach_message_batches", "RuntimeError: relation missing"]])
 
     def test_job_targets_come_from_environment_for_known_jobs_only(self):
         with patch.dict(os.environ, {"LAB_JOB_TARGETS_MINUTES": '{"Connect batch": 30, "Other": 5, "Reply send": -1}'}):
@@ -124,6 +126,32 @@ class LabMonitoringTest(unittest.TestCase):
     def test_every_source_is_listed_once(self):
         self.assertEqual(len({s.key for s in JOB_SOURCES}), len(JOB_SOURCES))
         self.assertEqual(job_history({}, None, set())["complete"], False)
+
+    def test_failed_sources_explain_why_without_secrets(self):
+        class APIError(Exception):
+            code = "42703"
+            message = "column outreach_jobs.created_at does not exist"
+        tables = dict(TABLES, outreach_jobs=APIError())
+        report = self.report(tables)
+        section = report["profile"]["sections"][0]
+        self.assertEqual(section["id"], "diagnostics")
+        self.assertEqual(section["table"]["rows"], [["outreach_jobs", "APIError: 42703 column outreach_jobs.created_at does not exist"]])
+        self.assertIn("42703", report["database"]["error"])
+
+    def test_missing_client_is_reported_and_secrets_are_scrubbed(self):
+        from app.lab_monitoring import safe_reason
+        report = build_report(None, 7, worker_activity=lambda: 1 / 0, now=lambda: NOW,
+                              client_error="RuntimeError: Missing required environment variable: OUTREACH_SUPABASE_URL")
+        rows = report["profile"]["sections"][0]["table"]["rows"]
+        self.assertEqual(rows[0][0], "Supabase client")
+        self.assertIn("OUTREACH_SUPABASE_URL", rows[0][1])
+        self.assertTrue(all(r[1] == "Không có Supabase client" for r in rows[1:]))
+        leaked = safe_reason(RuntimeError("bad key=sb_secret_abcdefghijklmnopqrstuvwxyz0123456789"))
+        self.assertNotIn("abcdefghijklmnop", leaked)
+
+    def test_no_diagnostics_section_when_everything_reads(self):
+        self.assertNotEqual(self.report()["profile"]["sections"][0]["id"], "diagnostics")
+        self.assertIsNone(self.report()["database"]["error"])
 
 
 if __name__ == "__main__":

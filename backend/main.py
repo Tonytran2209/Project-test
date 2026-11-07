@@ -91,7 +91,7 @@ from app.outreach_reply_send_store import (
 )
 from app.outreach_worker_activity import get_outreach_worker_activity
 from app.outreach_dashboard_store import get_outreach_client
-from app.lab_monitoring import build_report as build_lab_report
+from app.lab_monitoring import build_report as build_lab_report, safe_reason
 
 
 
@@ -221,12 +221,13 @@ def lab_monitoring(request: Request, days: int = 7):
         return JSONResponse({"detail": "Unauthorized"}, status_code=401)
     if days < 1 or days > 30:
         return JSONResponse({"detail": "days must be 1..30"}, status_code=422)
+    client, client_error = None, None
     try:
         client = get_outreach_client()
-    except Exception:
-        logger.warning("Lab monitoring: Supabase client unavailable")
-        client = None
-    report = build_lab_report(client, days, worker_activity=get_outreach_worker_activity)
+    except Exception as error:
+        client_error = safe_reason(error)
+        logger.warning("Lab monitoring: Supabase client unavailable: %s", client_error)
+    report = build_lab_report(client, days, worker_activity=get_outreach_worker_activity, client_error=client_error)
     return JSONResponse(report, headers={"Cache-Control": "private, no-store"})
 
 
