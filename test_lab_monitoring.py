@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
 
-from app.lab_monitoring import build_report, job_history, JOB_SOURCES
+from app.lab_monitoring import build_report, job_history, job_runs, JOB_SOURCES
 
 NOW = datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc)
 
@@ -77,6 +77,30 @@ class LabMonitoringTest(unittest.TestCase):
         self.assertEqual(report["window"]["days"], 7)
         self.assertEqual(report["database"]["status"], "ready")
         self.assertEqual(report["profile"]["version"], "profile-v1")
+
+    def test_job_runs_list_recent_runs_for_lab(self):
+        sources = {source.key: [] for source in JOB_SOURCES}
+        sources["connect"] = [
+            {"status": "completed", "started_at": "2026-11-07T10:00:00+00:00", "completed_at": "2026-11-07T10:30:00+00:00"},
+            {"status": "failed", "started_at": None, "completed_at": None, "updated_at": "2026-11-06T09:00:00+00:00", "last_error": "x"},
+            {"status": "running", "started_at": "2026-11-07T11:00:00+00:00"},
+            {"status": "completed", "started_at": "2026-08-01T00:00:00+00:00", "completed_at": "2026-08-01T01:00:00+00:00"},
+            {"status": "queued"},
+        ]
+        sources["reply_send"] = [
+            {"status": "sent", "started_at": "2026-11-07T08:00:00+00:00", "sent_at": "2026-11-07T08:00:05+00:00"},
+        ]
+        result = job_runs(sources, NOW, set())
+        self.assertEqual(result["since"], "2026-09-07T12:00:00+00:00")
+        self.assertTrue(result["complete"])
+        self.assertEqual([(r["job"], r["status"]) for r in result["runs"]], [
+            ("Connect batch", "running"), ("Connect batch", "success"), ("Reply send", "success"), ("Connect batch", "failed"),
+        ])
+        self.assertIsNone(result["runs"][3]["startedAt"])
+        self.assertIsNone(result["runs"][0]["endedAt"])
+        self.assertFalse(job_runs(sources, NOW, {"connect"})["complete"])
+        self.assertFalse(job_runs({}, NOW, set())["complete"])
+        self.assertFalse(job_runs(sources, NOW, set(), limit=2)["complete"])
 
     def test_job_history_balances_and_classifies_failures(self):
         period = self.report()["jobHistory"]

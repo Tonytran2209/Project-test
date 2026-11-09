@@ -134,6 +134,48 @@ def job_history(sources: dict[str, list[dict] | None], since: datetime | None, t
     }
 
 
+RUNNING = ("running", "processing")
+
+
+def job_runs(sources: dict[str, list[dict] | None], current: datetime, truncated: set[str], limit: int = 5000) -> dict:
+    """app-monitoring-v1 jobRuns: runs that ended (or are still running) in the last 61 days.
+
+    AI Agent Lab computes its own periods, comparisons and per-job error rates from these.
+    Only job names, statuses and timestamps leave the app."""
+    since = current - timedelta(days=61)
+    runs: list[dict] = []
+    complete = not truncated
+    for source in JOB_SOURCES:
+        rows = sources.get(source.key)
+        if rows is None:
+            complete = False
+            continue
+        for row in rows:
+            status = str(row.get("status") or "").lower()
+            start = _time(row.get(source.start))
+            if status in RUNNING:
+                if not start or start < since:
+                    continue
+                runs.append({"job": source.job, "workload": "", "status": "running",
+                             "startedAt": start.isoformat(), "endedAt": None})
+                continue
+            if status not in (source.success, source.failure):
+                continue
+            end = _end(row, source) or _time(row.get("updated_at"))
+            if not end or end < since:
+                continue
+            runs.append({
+                "job": source.job, "workload": "",
+                "status": "success" if status == source.success else "failed",
+                "startedAt": start.isoformat() if start and start <= end else None,
+                "endedAt": end.isoformat(),
+            })
+    runs.sort(key=lambda r: r["endedAt"] or r["startedAt"], reverse=True)
+    if len(runs) > limit:
+        runs, complete = runs[:limit], False
+    return {"since": since.isoformat(), "complete": complete, "runs": runs}
+
+
 def _status_counts(rows: Iterable[dict]) -> list[dict]:
     counts: dict[str, int] = {}
     for row in rows:
@@ -360,6 +402,7 @@ def build_report(client, days: int, *, worker_activity: Callable[[], dict] | Non
             "responseMs": db_ms if reachable else None,
             "error": client_error or (next(iter(errors.values())) if errors else None),
         },
+        "jobRuns": job_runs(sources, current, truncated),
         "jobHistory": job_history(sources, since, truncated),
         "jobHistoryAllTime": job_history(sources, None, truncated),
         "inventory": inventory,
